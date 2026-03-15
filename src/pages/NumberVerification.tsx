@@ -237,7 +237,7 @@ export const NumberVerification: React.FC = () => {
                       Enter a phone number and select a country to see detailed verification results.
                     </p>
                   </div>
-                </div>
+                </motion.div>
               )}
             </AnimatePresence>
           </div>
