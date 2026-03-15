@@ -13,15 +13,19 @@ import { Cart } from './components/Cart';
 import { Dashboard } from './components/Dashboard';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
-import { ServiceDetailsModal } from './components/ServiceDetailsModal';
-import { SERVICES } from './constants';
+import { AccountRoom } from './pages/AccountRoom';
+import { OrderHistory } from './pages/OrderHistory';
+import { PaymentGateway } from './pages/PaymentGateway';
+import { PurchaseModal } from './components/PurchaseModal';
+import { AllProducts } from './pages/AllProducts';
+import { ProfilePage } from './pages/ProfilePage';
 import { Service, CartItem } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './utils';
 
 export default function App() {
   const [isDarkMode, setIsDarkMode] = useState(true);
-  const [currentView, setCurrentView] = useState<'home' | 'dashboard' | 'login' | 'signup'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'dashboard' | 'login' | 'signup' | 'account-room' | 'order-history' | 'payment-gateway' | 'all-products' | 'profile'>('home');
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
@@ -79,8 +83,13 @@ export default function App() {
         onCartClick={() => setIsCartOpen(true)}
         onDashboardClick={() => setCurrentView('dashboard')}
         onHomeClick={() => setCurrentView('home')}
+        onAllProductsClick={() => setCurrentView('all-products')}
+        onProfileClick={() => setCurrentView('profile')}
+        onFundWalletClick={() => setCurrentView('payment-gateway')}
         onLoginClick={() => setCurrentView('login')}
         onSignupClick={() => setCurrentView('signup')}
+        onAccountRoomClick={() => setCurrentView('account-room')}
+        onOrderHistoryClick={() => setCurrentView('order-history')}
         isDarkMode={isDarkMode}
         toggleDarkMode={() => setIsDarkMode(!isDarkMode)}
         showSecondaryNav={currentView === 'home'}
@@ -99,8 +108,8 @@ export default function App() {
             
             <div id="services">
               <ServicesGrid 
-                services={SERVICES} 
                 onAddToCart={(service) => setSelectedService(service)} 
+                onViewAll={() => setCurrentView('all-products')}
               />
             </div>
 
@@ -145,6 +154,16 @@ export default function App() {
           >
             <Dashboard />
           </motion.div>
+        ) : currentView === 'all-products' ? (
+          <motion.div
+            key="all-products"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <AllProducts onAddToCart={(service) => setSelectedService(service)} />
+          </motion.div>
         ) : currentView === 'login' ? (
           <motion.div
             key="login"
@@ -158,7 +177,7 @@ export default function App() {
               onBackToHome={() => setCurrentView('home')} 
             />
           </motion.div>
-        ) : (
+        ) : currentView === 'signup' ? (
           <motion.div
             key="signup"
             initial={{ opacity: 0 }}
@@ -170,6 +189,46 @@ export default function App() {
               onLoginClick={() => setCurrentView('login')} 
               onBackToHome={() => setCurrentView('home')} 
             />
+          </motion.div>
+        ) : currentView === 'account-room' ? (
+          <motion.div
+            key="account-room"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <AccountRoom />
+          </motion.div>
+        ) : currentView === 'order-history' ? (
+          <motion.div
+            key="order-history"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <OrderHistory />
+          </motion.div>
+        ) : currentView === 'profile' ? (
+          <motion.div
+            key="profile"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <ProfilePage onLoginClick={() => setCurrentView('login')} />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="payment-gateway"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <PaymentGateway onBack={() => setCurrentView('home')} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -185,10 +244,13 @@ export default function App() {
         onCheckout={handleCheckout}
       />
 
-      <ServiceDetailsModal 
-        service={selectedService}
+      <PurchaseModal 
+        product={selectedService}
         onClose={() => setSelectedService(null)}
-        onAddToCart={handleAddToCart}
+        onAddFunds={() => {
+          setSelectedService(null);
+          setCurrentView('payment-gateway');
+        }}
       />
     </div>
   );

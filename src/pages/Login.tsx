@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { motion } from 'motion/react';
+import { supabase } from '../lib/supabase';
 
 interface LoginProps {
   onSignupClick: () => void;
@@ -11,10 +12,29 @@ export const Login: React.FC<LoginProps> = ({ onSignupClick, onBackToHome }) => 
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // No logic yet as per requirements
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+      
+      // On success, state reflects in AuthContext.
+      onBackToHome(); // Or redirect to dashboard!
+    } catch (err: any) {
+      setError(err.message || 'Failed to login');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -34,6 +54,12 @@ export const Login: React.FC<LoginProps> = ({ onSignupClick, onBackToHome }) => 
               <h1 className="text-3xl font-bold font-display mb-2">Welcome Back</h1>
               <p className="text-slate-500 dark:text-slate-400">Enter your credentials to access your account</p>
             </div>
+
+            {error && (
+              <div className="mb-6 bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 p-4 rounded-xl text-sm text-center">
+                {error}
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
@@ -80,9 +106,13 @@ export const Login: React.FC<LoginProps> = ({ onSignupClick, onBackToHome }) => 
                 </div>
               </div>
 
-              <button type="submit" className="btn-primary w-full py-4 rounded-2xl flex items-center justify-center gap-2 group">
-                Login to Account
-                <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+              <button 
+                type="submit" 
+                disabled={loading}
+                className="btn-primary w-full py-4 rounded-2xl flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Logging in...' : 'Login to Account'}
+                {!loading && <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />}
               </button>
             </form>
 

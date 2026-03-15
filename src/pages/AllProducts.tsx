@@ -1,17 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Service, Platform } from '../types';
-import { ServiceCard } from './ServiceCard';
-import { Search, Filter, Loader2 } from 'lucide-react';
-import { cn } from '../utils';
+import { ServiceCard } from '../components/ServiceCard';
 import { fetchResellerProducts, SupplierCategory } from '../services/api';
+import { Service } from '../types';
+import { Search, Loader2 } from 'lucide-react';
+import { cn } from '../utils';
 
-interface ServicesGridProps {
+interface AllProductsProps {
   onAddToCart: (service: Service) => void;
-  onViewAll: () => void;
 }
 
-export const ServicesGrid: React.FC<ServicesGridProps> = ({ onAddToCart, onViewAll }) => {
+export const AllProducts: React.FC<AllProductsProps> = ({ onAddToCart }) => {
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [services, setServices] = useState<Service[]>([]);
@@ -19,16 +18,18 @@ export const ServicesGrid: React.FC<ServicesGridProps> = ({ onAddToCart, onViewA
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadServices = async () => {
+    window.scrollTo(0, 0);
+    
+    const loadProducts = async () => {
       try {
         const payload = await fetchResellerProducts();
         if (payload && payload.products.length > 0) {
           setCategories(payload.categories);
 
-          const mappedServices: Service[] = payload.products.map(product => ({
+          const mappedServices: Service[] = payload.products.map((product) => ({
             id: product.id,
             name: product.name,
-            platform: product.type as Platform,
+            platform: product.type,
             type: product.type,
             category: 'External Services',
             pricePer1000: product.price,
@@ -45,12 +46,12 @@ export const ServicesGrid: React.FC<ServicesGridProps> = ({ onAddToCart, onViewA
           setServices(mappedServices);
         }
       } catch (e) {
-        console.error("Failed to load APIs", e);
+        console.error("Failed to load products for All Products page", e);
       } finally {
         setLoading(false);
       }
     };
-    loadServices();
+    loadProducts();
   }, []);
 
   const filteredServices = services.filter(service => {
@@ -60,14 +61,14 @@ export const ServicesGrid: React.FC<ServicesGridProps> = ({ onAddToCart, onViewA
     return matchesCategory && matchesSearch;
   });
 
-  const displayedServices = filteredServices.slice(0, 8);
-
   return (
-    <section className="py-20 px-6 max-w-7xl mx-auto">
+    <div className="pt-24 pb-20 px-4 md:px-6 max-w-7xl mx-auto min-h-screen">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12">
         <div>
-          <h2 className="text-3xl md:text-4xl font-bold font-display mb-4">Explore Our Services</h2>
-          <p className="text-slate-500 max-w-md">Choose from our wide range of premium social media marketing services tailored for your growth.</p>
+          <h1 className="text-4xl md:text-5xl font-bold font-display mb-4 dark:text-white">All Products</h1>
+          <p className="text-slate-500 max-w-xl dark:text-slate-400">
+            Browse our complete catalog of premium accounts, digital services, and subscriptions powered directly by our live supplier network.
+          </p>
         </div>
         
         <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
@@ -75,25 +76,21 @@ export const ServicesGrid: React.FC<ServicesGridProps> = ({ onAddToCart, onViewA
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input 
               type="text"
-              placeholder="Search services..."
+              placeholder="Search all products..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full sm:w-64 pl-10 pr-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+              className="w-full sm:w-72 pl-10 pr-4 py-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all dark:text-white"
             />
           </div>
-          <button className="btn-secondary py-2.5 px-4">
-            <Filter size={18} />
-            Filters
-          </button>
         </div>
       </div>
 
-      {/* Category Tabs with Icons */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-8 no-scrollbar">
+      {/* Dynamic Category Filter Tabs with Icons */}
+      <div className="flex flex-wrap items-center gap-2 pb-4 mb-8">
         <button
           onClick={() => setActiveCategory('All')}
           className={cn(
-            "px-6 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all",
+            "px-5 py-2 rounded-full text-sm font-medium transition-all",
             activeCategory === 'All' 
               ? "bg-primary text-white shadow-lg shadow-primary/20" 
               : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:border-primary/50"
@@ -106,7 +103,7 @@ export const ServicesGrid: React.FC<ServicesGridProps> = ({ onAddToCart, onViewA
             key={cat.name}
             onClick={() => setActiveCategory(cat.name)}
             className={cn(
-              "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all flex items-center gap-2",
+              "px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2",
               activeCategory === cat.name 
                 ? "bg-primary text-white shadow-lg shadow-primary/20" 
                 : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:border-primary/50"
@@ -122,15 +119,15 @@ export const ServicesGrid: React.FC<ServicesGridProps> = ({ onAddToCart, onViewA
 
       <motion.div 
         layout
-        className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 relative min-h-[400px]"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 relative min-h-[400px]"
       >
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm z-10 rounded-3xl">
-            <Loader2 className="animate-spin text-primary" size={32} />
+            <Loader2 className="animate-spin text-primary" size={40} />
           </div>
         )}
         <AnimatePresence mode="popLayout">
-          {displayedServices.map((service) => (
+          {filteredServices.map((service) => (
             <motion.div
               key={service.id}
               layout
@@ -145,26 +142,15 @@ export const ServicesGrid: React.FC<ServicesGridProps> = ({ onAddToCart, onViewA
         </AnimatePresence>
       </motion.div>
 
-      {displayedServices.length === 0 && !loading && (
+      {filteredServices.length === 0 && !loading && (
         <div className="py-20 text-center">
           <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
             <Search size={32} />
           </div>
-          <h3 className="text-xl font-bold mb-2">No services found</h3>
-          <p className="text-slate-500">Try adjusting your search or filters to find what you're looking for.</p>
+          <h3 className="text-xl font-bold mb-2 dark:text-white">No products found</h3>
+          <p className="text-slate-500">We couldn't find any products in this category. Try adjusting your search.</p>
         </div>
       )}
-
-      {filteredServices.length > 8 && !loading && (
-        <div className="mt-12 text-center">
-          <button 
-            onClick={onViewAll}
-            className="btn-primary py-3 px-8 text-lg hover:scale-105 transition-transform"
-          >
-            View More Products
-          </button>
-        </div>
-      )}
-    </section>
+    </div>
   );
 };

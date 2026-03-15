@@ -12,17 +12,17 @@ export const Hero: React.FC = () => {
   ];
 
   return (
-    <section className="pt-28 pb-12 px-4 md:px-6 max-w-7xl mx-auto">
-      <div className="h-[350px] md:h-[600px] w-full">
+    <section className="pt-20 md:pt-28 pb-12 px-0 md:px-6 max-w-7xl mx-auto">
+      <div className="h-[250px] sm:h-[350px] md:h-[600px] w-full">
         <ImageSlider 
           images={images} 
-          className="rounded-[2rem] shadow-2xl" 
+          className="rounded-none md:rounded-[2rem] shadow-none md:shadow-2xl h-full" 
           autoPlayInterval={5000} 
         />
       </div>
       
       {/* Quick Features Bar */}
-      <div className="mt-6 md:mt-8 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+      <div className="mt-6 md:mt-8 px-4 md:px-0 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         {[
           { icon: Zap, label: 'Instant Delivery', color: 'text-amber-500' },
           { icon: ShieldCheck, label: 'Secure Payment', color: 'text-emerald-500' },

@@ -16,6 +16,7 @@ import {
   Zap
 } from 'lucide-react';
 import { Order } from '../types';
+import { useCurrency } from '../contexts/CurrencyContext';
 import { cn } from '../utils';
 
 const MOCK_ORDERS: Order[] = [
@@ -51,6 +52,7 @@ const MOCK_ORDERS: Order[] = [
 ];
 
 export const Dashboard: React.FC = () => {
+  const { formatPrice } = useCurrency();
   const [isAdmin, setIsAdmin] = useState(false);
 
   return (
@@ -106,7 +108,7 @@ export const Dashboard: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {[
-                { label: 'Total Revenue', value: '$45,280.00', color: 'text-emerald-500' },
+                { label: 'Total Revenue', value: formatPrice(45280.00), color: 'text-emerald-500' },
                 { label: 'Active Users', value: '12,402', color: 'text-primary' },
                 { label: 'Pending Orders', value: '48', color: 'text-amber-500' },
               ].map((stat, i) => (
@@ -157,8 +159,8 @@ export const Dashboard: React.FC = () => {
             {/* Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
-                { label: 'Wallet Balance', value: '$124.50', icon: Wallet, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-                { label: 'Total Spent', value: '$1,240.00', icon: TrendingUp, color: 'text-primary', bg: 'bg-primary/10' },
+                { label: 'Wallet Balance', value: formatPrice(124.50), icon: Wallet, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+                { label: 'Total Spent', value: formatPrice(1240.00), icon: TrendingUp, color: 'text-primary', bg: 'bg-primary/10' },
                 { label: 'Active Orders', value: '3', icon: Clock, color: 'text-amber-500', bg: 'bg-amber-500/10' },
                 { label: 'Completed', value: '142', icon: CheckCircle2, color: 'text-cyan-500', bg: 'bg-cyan-500/10' },
               ].map((stat, i) => (
@@ -228,7 +230,7 @@ export const Dashboard: React.FC = () => {
                             <span className="text-xs text-slate-400">-</span>
                           )}
                         </td>
-                        <td className="px-6 py-4 text-sm font-bold">${order.total.toFixed(2)}</td>
+                        <td className="px-6 py-4 text-sm font-bold">{formatPrice(order.total)}</td>
                       </tr>
                     ))}
                   </tbody>

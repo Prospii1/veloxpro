@@ -1,9 +1,10 @@
-export type Platform = 'Instagram' | 'TikTok' | 'YouTube' | 'Twitter' | 'Facebook';
+export type Platform = string; // Eased from strict union to allow dynamic supplier categories
 
 export interface Service {
   id: string;
   name: string;
   platform: Platform;
+  type?: string; 
   category: string;
   description: string;
   pricePer1000: number;
@@ -12,6 +13,8 @@ export interface Service {
   deliveryTime: string;
   rating: number;
   reviews: number;
+  icon?: any;
+  features?: string[];
 }
 
 export interface CartItem {
