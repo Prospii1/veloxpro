@@ -17,6 +17,9 @@ interface NavbarProps {
   onSignupClick: () => void;
   onAccountRoomClick: () => void;
   onOrderHistoryClick: () => void;
+  onNumberVerificationClick: () => void;
+  onGiftsClick: () => void;
+  onAdminClick: () => void;
   isDarkMode: boolean;
   toggleDarkMode: () => void;
   showSecondaryNav?: boolean;
@@ -34,6 +37,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSignupClick,
   onAccountRoomClick,
   onOrderHistoryClick,
+  onNumberVerificationClick,
+  onGiftsClick,
+  onAdminClick,
   isDarkMode,
   toggleDarkMode,
   showSecondaryNav = true
@@ -177,6 +183,26 @@ export const Navbar: React.FC<NavbarProps> = ({
                 >
                   Order History
                 </button>
+                <button 
+                  onClick={onNumberVerificationClick}
+                  className="text-sm font-bold px-2 py-2 hover:text-primary transition-colors dark:text-slate-300"
+                >
+                  Number Verification
+                </button>
+                <button 
+                  onClick={onGiftsClick}
+                  className="text-sm font-bold px-2 py-2 hover:text-primary transition-colors dark:text-slate-300"
+                >
+                  Gifts
+                </button>
+                {profile?.role === 'Admin' && (
+                  <button 
+                    onClick={onAdminClick}
+                    className="text-sm font-bold px-2 py-2 text-primary hover:text-primary transition-colors border-2 border-primary/20 rounded-xl px-4"
+                  >
+                    Admin
+                  </button>
+                )}
                 <button 
                   onClick={onProfileClick}
                   className="text-sm font-bold px-2 py-2 hover:text-primary transition-colors dark:text-slate-300"
@@ -337,6 +363,26 @@ export const Navbar: React.FC<NavbarProps> = ({
                   >
                     Order History
                   </button>
+                  <button 
+                    onClick={() => { onNumberVerificationClick(); setIsMobileMenuOpen(false); }}
+                    className="w-full text-left px-4 py-3 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3"
+                  >
+                    Number Verification
+                  </button>
+                  <button 
+                    onClick={() => { onGiftsClick(); setIsMobileMenuOpen(false); }}
+                    className="w-full text-left px-4 py-3 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3"
+                  >
+                    Gifts
+                  </button>
+                  {profile?.role === 'Admin' && (
+                    <button 
+                      onClick={() => { onAdminClick(); setIsMobileMenuOpen(false); }}
+                      className="w-full text-left px-4 py-3 rounded-xl font-bold text-primary hover:bg-primary/5 flex items-center gap-3"
+                    >
+                      Admin Dashboard
+                    </button>
+                  )}
                   <button 
                     onClick={() => { onProfileClick(); setIsMobileMenuOpen(false); }}
                     className="w-full text-left px-4 py-3 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3"

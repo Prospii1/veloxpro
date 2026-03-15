@@ -99,3 +99,14 @@ export const verifyOTP = async (userId: string, code: string) => {
   if (!response.ok) throw new Error('OTP verification failed');
   return await response.json();
 };
+
+export const verifyPhoneNumber = async (number: string, country: string) => {
+  const response = await fetch(`${API_BASE_URL}/verify-number`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ number, country }),
+  });
+  
+  if (!response.ok) throw new Error('Phone verification failed');
+  return await response.json();
+};

@@ -19,13 +19,16 @@ import { PaymentGateway } from './pages/PaymentGateway';
 import { PurchaseModal } from './components/PurchaseModal';
 import { AllProducts } from './pages/AllProducts';
 import { ProfilePage } from './pages/ProfilePage';
+import { NumberVerification } from './pages/NumberVerification';
+import { GiftsPage } from './pages/Gifts';
+import { AdminDashboard } from './pages/AdminDashboard';
 import { Service, CartItem } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './utils';
 
 export default function App() {
   const [isDarkMode, setIsDarkMode] = useState(true);
-  const [currentView, setCurrentView] = useState<'home' | 'dashboard' | 'login' | 'signup' | 'account-room' | 'order-history' | 'payment-gateway' | 'all-products' | 'profile'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'dashboard' | 'login' | 'signup' | 'account-room' | 'order-history' | 'payment-gateway' | 'all-products' | 'profile' | 'number-verification' | 'gifts' | 'admin'>('home');
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
@@ -90,6 +93,9 @@ export default function App() {
         onSignupClick={() => setCurrentView('signup')}
         onAccountRoomClick={() => setCurrentView('account-room')}
         onOrderHistoryClick={() => setCurrentView('order-history')}
+        onNumberVerificationClick={() => setCurrentView('number-verification')}
+        onGiftsClick={() => setCurrentView('gifts')}
+        onAdminClick={() => setCurrentView('admin')}
         isDarkMode={isDarkMode}
         toggleDarkMode={() => setIsDarkMode(!isDarkMode)}
         showSecondaryNav={currentView === 'home'}
@@ -122,8 +128,18 @@ export default function App() {
                     Get started today and see the difference in minutes.
                   </p>
                   <div className="flex flex-wrap gap-4">
-                    <button className="btn-primary px-8 py-4">Create Free Account</button>
-                    <button className="btn-secondary px-8 py-4">View Pricing</button>
+                    <button 
+                      onClick={() => setCurrentView('signup')}
+                      className="btn-primary px-8 py-4"
+                    >
+                      Create Free Account
+                    </button>
+                    <button 
+                      onClick={() => setCurrentView('all-products')}
+                      className="btn-secondary px-8 py-4"
+                    >
+                      View Pricing
+                    </button>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4 w-full lg:w-auto">
@@ -219,6 +235,36 @@ export default function App() {
             transition={{ duration: 0.3 }}
           >
             <ProfilePage onLoginClick={() => setCurrentView('login')} />
+          </motion.div>
+        ) : currentView === 'number-verification' ? (
+          <motion.div
+            key="number-verification"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <NumberVerification />
+          </motion.div>
+        ) : currentView === 'gifts' ? (
+          <motion.div
+            key="gifts"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <GiftsPage />
+          </motion.div>
+        ) : currentView === 'admin' ? (
+          <motion.div
+            key="admin"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <AdminDashboard />
           </motion.div>
         ) : (
           <motion.div

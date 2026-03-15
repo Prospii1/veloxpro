@@ -105,7 +105,7 @@ export const ImageSlider: React.FC<ImageSliderProps> = ({
             <img
               src={images[currentIndex]}
               alt={`Slide ${currentIndex + 1}`}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover pointer-events-none"
               referrerPolicy="no-referrer"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
