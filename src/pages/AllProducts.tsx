@@ -8,10 +8,11 @@ import { cn } from '../utils';
 
 interface AllProductsProps {
   onAddToCart: (service: Service) => void;
+  initialCategory?: string;
 }
 
-export const AllProducts: React.FC<AllProductsProps> = ({ onAddToCart }) => {
-  const [activeCategory, setActiveCategory] = useState<string>('All');
+export const AllProducts: React.FC<AllProductsProps> = ({ onAddToCart, initialCategory = 'All' }) => {
+  const [activeCategory, setActiveCategory] = useState<string>(initialCategory);
   const [searchQuery, setSearchQuery] = useState('');
   const [services, setServices] = useState<Service[]>([]);
   const [categories, setCategories] = useState<SupplierCategory[]>([]);

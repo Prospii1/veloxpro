@@ -3,6 +3,8 @@ import { Gift, ShoppingBag, Info, Loader2, Sparkles, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import { useCurrency } from '../contexts/CurrencyContext';
+import { PurchaseModal } from '../components/PurchaseModal';
+import { Service } from '../types';
 import { cn } from '../utils';
 
 interface GiftItem {
@@ -17,7 +19,9 @@ interface GiftItem {
 export const GiftsPage: React.FC = () => {
   const [gifts, setGifts] = useState<GiftItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const { currency } = useCurrency();
+  const { formatPrice } = useCurrency();
+  const [selectedGift, setSelectedGift] = useState<Service | null>(null);
+  const [showFundModal, setShowFundModal] = useState(false);
 
   useEffect(() => {
     fetchGifts();
@@ -70,10 +74,25 @@ export const GiftsPage: React.FC = () => {
     }
   };
 
-  const formatPrice = (price: number) => {
-    return currency === 'NGN' 
-      ? `₦${(price * 1500).toLocaleString()}` 
-      : `$${price.toFixed(2)}`;
+  const handlePurchase = (gift: GiftItem) => {
+    // Map GiftItem to Service type for PurchaseModal
+    const service: Service = {
+      id: gift.id,
+      name: gift.name,
+      platform: 'Digital Gift',
+      type: 'Gift',
+      category: 'Gifts',
+      pricePer1000: gift.price,
+      minOrder: 1,
+      maxOrder: 1,
+      description: gift.description,
+      features: ['Immediate Activation', 'Global Status'],
+      icon: 'Gift',
+      deliveryTime: 'Instant',
+      rating: 5.0,
+      reviews: 100
+    };
+    setSelectedGift(service);
   };
 
   return (
@@ -133,10 +152,13 @@ export const GiftsPage: React.FC = () => {
                           <span className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Price</span>
                           <span className="text-2xl font-bold text-emerald-500">{formatPrice(gift.price)}</span>
                         </div>
-                        <button className="btn-primary p-4 rounded-2xl flex items-center justify-center gap-2 group/btn shadow-lg shadow-primary/20">
-                          <ShoppingBag size={20} />
-                          <span className="font-bold">Purchase</span>
-                        </button>
+                           <button 
+                             onClick={() => handlePurchase(gift)}
+                             className="btn-primary p-4 rounded-2xl flex items-center justify-center gap-2 group/btn shadow-lg shadow-primary/20"
+                           >
+                            <ShoppingBag size={20} />
+                            <span className="font-bold">Purchase</span>
+                          </button>
                       </div>
                     </div>
                   </div>
@@ -160,6 +182,17 @@ export const GiftsPage: React.FC = () => {
             </button>
           </div>
         </div>
+
+        <PurchaseModal 
+          product={selectedGift} 
+          onClose={() => setSelectedGift(null)}
+          onAddFunds={() => {
+            setSelectedGift(null);
+            setShowFundModal(true);
+            // Redirect to fund wallet or handle naturally
+            window.location.href = '/fund-wallet';
+          }}
+        />
       </div>
     </div>
   );

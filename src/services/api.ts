@@ -37,12 +37,12 @@ export const fetchResellerProducts = async (): Promise<SupplierPayload | null> =
 };
 
 // ─── Purchase Account ────────────────────────────────────────────────────────
-export const purchaseSupplierAccount = async (productId: string, supplierId: string) => {
+export const purchaseSupplierAccount = async (productId: string, productName: string, supplierId: string, userId: string, amount: number) => {
   try {
     const response = await fetch(`${API_BASE_URL}/reseller/purchase`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ productId, supplierId }),
+      body: JSON.stringify({ productId, productName, supplierId, userId, amount }),
     });
     
     if (!response.ok) throw new Error('Failed to complete supplier purchase');

@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
+import { useAuth } from './contexts/AuthContext';
 import { Hero } from './components/Hero';
 import { ServicesGrid } from './components/ServicesGrid';
 import { Testimonials } from './components/Testimonials';
@@ -27,8 +28,16 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './utils';
 
 export default function App() {
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const { user } = useAuth();
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('velox-theme');
+      return saved ? saved === 'dark' : false;
+    }
+    return false;
+  });
   const [currentView, setCurrentView] = useState<'home' | 'dashboard' | 'login' | 'signup' | 'account-room' | 'order-history' | 'payment-gateway' | 'all-products' | 'profile' | 'number-verification' | 'gifts' | 'admin'>('home');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
@@ -37,8 +46,10 @@ export default function App() {
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
+      localStorage.setItem('velox-theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
+      localStorage.setItem('velox-theme', 'light');
     }
   }, [isDarkMode]);
 
@@ -98,7 +109,7 @@ export default function App() {
         onAdminClick={() => setCurrentView('admin')}
         isDarkMode={isDarkMode}
         toggleDarkMode={() => setIsDarkMode(!isDarkMode)}
-        showSecondaryNav={currentView === 'home'}
+        showSecondaryNav={currentView === 'home' && !!user}
       />
 
       <AnimatePresence mode="wait">
@@ -115,7 +126,8 @@ export default function App() {
             <div id="services">
               <ServicesGrid 
                 onAddToCart={(service) => setSelectedService(service)} 
-                onViewAll={() => setCurrentView('all-products')}
+                onViewAll={() => { setSelectedCategory('All'); setCurrentView('all-products'); }}
+                onCategoryClick={(category) => { setSelectedCategory(category); setCurrentView('all-products'); }}
               />
             </div>
 
@@ -178,7 +190,10 @@ export default function App() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <AllProducts onAddToCart={(service) => setSelectedService(service)} />
+            <AllProducts 
+              onAddToCart={(service) => setSelectedService(service)} 
+              initialCategory={selectedCategory}
+            />
           </motion.div>
         ) : currentView === 'login' ? (
           <motion.div

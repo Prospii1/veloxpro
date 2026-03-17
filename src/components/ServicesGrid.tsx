@@ -2,16 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Service, Platform } from '../types';
 import { ServiceCard } from './ServiceCard';
-import { Search, Filter, Loader2 } from 'lucide-react';
+import { Search, Filter, Loader2, Zap } from 'lucide-react';
 import { cn } from '../utils';
 import { fetchResellerProducts, SupplierCategory } from '../services/api';
 
 interface ServicesGridProps {
   onAddToCart: (service: Service) => void;
   onViewAll: () => void;
+  onCategoryClick: (category: string) => void;
 }
 
-export const ServicesGrid: React.FC<ServicesGridProps> = ({ onAddToCart, onViewAll }) => {
+export const ServicesGrid: React.FC<ServicesGridProps> = ({ onAddToCart, onViewAll, onCategoryClick }) => {
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [services, setServices] = useState<Service[]>([]);
@@ -60,108 +61,61 @@ export const ServicesGrid: React.FC<ServicesGridProps> = ({ onAddToCart, onViewA
     return matchesCategory && matchesSearch;
   });
 
-  const displayedServices = filteredServices.slice(0, 8);
+  // Group services by category for the homepage view
+  const categorizedServices = categories.map(cat => ({
+    ...cat,
+    products: services.filter(s => s.type === cat.name).slice(0, 4)
+  })).filter(cat => cat.products.length > 0);
 
   return (
     <section className="py-20 px-6 max-w-7xl mx-auto">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12">
-        <div>
-          <h2 className="text-3xl md:text-4xl font-bold font-display mb-4">Explore Our Services</h2>
-          <p className="text-slate-500 max-w-md">Choose from our wide range of premium social media marketing services tailored for your growth.</p>
-        </div>
-        
-        <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input 
-              type="text"
-              placeholder="Search services..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full sm:w-64 pl-10 pr-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-            />
-          </div>
-          <button className="btn-secondary py-2.5 px-4">
-            <Filter size={18} />
-            Filters
-          </button>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12 text-center md:text-left">
+        <div className="flex-1">
+          <h2 className="text-3xl md:text-5xl font-bold font-display mb-4 dark:text-white">Explore Categories</h2>
+          <p className="text-slate-500 max-w-xl dark:text-slate-400">Select a category to view all available premium accounts and digital services tailored for your needs.</p>
         </div>
       </div>
 
-      {/* Category Tabs with Icons */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-8 no-scrollbar">
-        <button
-          onClick={() => setActiveCategory('All')}
-          className={cn(
-            "px-6 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all",
-            activeCategory === 'All' 
-              ? "bg-primary text-white shadow-lg shadow-primary/20" 
-              : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:border-primary/50"
-          )}
-        >
-          All
-        </button>
-        {categories.map((cat) => (
-          <button
-            key={cat.name}
-            onClick={() => setActiveCategory(cat.name)}
-            className={cn(
-              "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all flex items-center gap-2",
-              activeCategory === cat.name 
-                ? "bg-primary text-white shadow-lg shadow-primary/20" 
-                : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:border-primary/50"
-            )}
-          >
-            {cat.icon && (
-              <img src={cat.icon} alt="" className="w-4 h-4 rounded-sm object-cover" />
-            )}
-            {cat.name}
-          </button>
-        ))}
-      </div>
-
-      <motion.div 
-        layout
-        className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 relative min-h-[400px]"
-      >
-        {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm z-10 rounded-3xl">
-            <Loader2 className="animate-spin text-primary" size={32} />
-          </div>
-        )}
-        <AnimatePresence mode="popLayout">
-          {displayedServices.map((service) => (
+      {loading ? (
+        <div className="h-[400px] flex items-center justify-center">
+          <Loader2 className="animate-spin text-primary" size={40} />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {categories.map((cat) => (
             <motion.div
-              key={service.id}
-              layout
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.3 }}
+              key={cat.name}
+              whileHover={{ y: -5, scale: 1.02 }}
+              onClick={() => onCategoryClick(cat.name)}
+              className="glass p-8 rounded-[2.5rem] border-white/10 cursor-pointer group hover:bg-gradient-to-br hover:from-primary/10 hover:to-secondary/10 transition-all duration-300"
             >
-              <ServiceCard service={service} onAddToCart={onAddToCart} />
+              <div className="w-20 h-20 rounded-[2rem] bg-white dark:bg-slate-900 shadow-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-center p-4 mb-6 group-hover:scale-110 transition-transform">
+                {cat.icon ? (
+                  <img src={cat.icon} alt={cat.name} className="w-full h-full object-contain" />
+                ) : (
+                  <Zap size={32} className="text-primary" />
+                )}
+              </div>
+              
+              <h3 className="text-2xl font-bold dark:text-white group-hover:text-primary transition-colors mb-2">{cat.name}</h3>
+              <p className="text-sm text-slate-500 mb-6">Browse premium accounts and services for {cat.name}.</p>
+              
+              <div className="flex items-center gap-2 text-primary font-bold text-sm">
+                <span>Explore Products</span>
+                <span className="group-hover:translate-x-1 transition-transform">→</span>
+              </div>
             </motion.div>
           ))}
-        </AnimatePresence>
-      </motion.div>
-
-      {displayedServices.length === 0 && !loading && (
-        <div className="py-20 text-center">
-          <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
-            <Search size={32} />
-          </div>
-          <h3 className="text-xl font-bold mb-2">No services found</h3>
-          <p className="text-slate-500">Try adjusting your search or filters to find what you're looking for.</p>
         </div>
       )}
 
-      {filteredServices.length > 8 && !loading && (
-        <div className="mt-12 text-center">
+      {services.length > 0 && !loading && (
+        <div className="mt-20 text-center">
           <button 
             onClick={onViewAll}
-            className="btn-primary py-3 px-8 text-lg hover:scale-105 transition-transform"
+            className="btn-primary py-5 px-12 text-lg rounded-[2.5rem] shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
           >
-            View More Products
+            Browse Full Catalog ({services.length} Products)
           </button>
         </div>
       )}

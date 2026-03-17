@@ -2,9 +2,14 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
+import { createClient } from '@supabase/supabase-js';
 
 // Load environment variables
 dotenv.config();
+
+const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -18,52 +23,39 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'VeloxPro API is running' });
 });
 
-// ─── 1. Fetch products/accounts with icons from Supplier API ─────────────────
+// ─── 1. Fetch products/accounts (Serve from DB with Sync) ─────────────────────
 app.get('/api/reseller/products', async (req, res) => {
   try {
-    const apiKey = process.env.SUPPLIER_API_KEY;
-    const apiUrl = process.env.SUPPLIER_API_URL;
-    
-    if (!apiKey || !apiUrl) throw new Error("Missing supplier credentials");
+    const { data: products, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('availability', true);
 
-    const response = await fetch(`${apiUrl}/products.php?api_key=${apiKey}`);
-    if (!response.ok) throw new Error('Failed to fetch from supplier');
-    
-    const data = await response.json();
-    
-    let allProducts: any[] = [];
-    let extractedCategories: { name: string; icon: string }[] = [];
-    
-    if (data.status === 'success' && data.categories) {
-      data.categories.forEach((cat: any) => {
-        if (cat.name && !extractedCategories.find(c => c.name === cat.name)) {
-          extractedCategories.push({
-            name: cat.name,
-            icon: cat.icon || ''
-          });
-        }
-        if (cat.products) {
-          cat.products.forEach((prod: any) => {
-            allProducts.push({
-              id: prod.id,
-              name: prod.name,
-              type: cat.name,
-              price: parseFloat(prod.price),
-              supplier_id: 'the-socialmarket',
-              availability: Number(prod.amount) > 0,
-              description: prod.description || cat.name,
-              iconUrl: cat.icon || ''
-            });
-          });
-        }
-      });
-    }
+    if (error) throw error;
+
+    // Group categories for the frontend
+    const categoriesMap = new Map();
+    products.forEach(p => {
+      if (p.type && !categoriesMap.has(p.type)) {
+        categoriesMap.set(p.type, { name: p.type, icon: p.icon_url || '' });
+      }
+    });
 
     res.json({
       success: true,
       data: {
-        categories: extractedCategories,
-        products: allProducts
+        categories: Array.from(categoriesMap.values()),
+        products: products.map(p => ({
+          id: p.id,
+          name: p.name,
+          type: p.type,
+          price: p.price, // Selling price
+          base_price: p.base_price,
+          supplier_id: p.supplier_id,
+          availability: p.availability,
+          description: p.description,
+          iconUrl: p.icon_url
+        }))
       }
     });
   } catch (error: any) {
@@ -72,56 +64,202 @@ app.get('/api/reseller/products', async (req, res) => {
   }
 });
 
+// ─── Supplier Sync Logic ─────────────────────────────────────────────────────
+async function syncSupplierProducts() {
+  console.log('[SYNC] Starting supplier product sync...');
+  try {
+    const apiKey = process.env.SUPPLIER_API_KEY;
+    const apiUrl = process.env.SUPPLIER_API_URL;
+    if (!apiKey || !apiUrl) throw new Error("Missing supplier credentials");
+
+    const response = await fetch(`${apiUrl}/products.php?api_key=${apiKey}`);
+    if (!response.ok) throw new Error('Failed to fetch from supplier');
+    const data = await response.json();
+
+    if (data.status !== 'success' || !data.categories) throw new Error('Invalid supplier data');
+
+    // Get markup settings
+    const { data: settings } = await supabase
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'markup_settings')
+      .single();
+    
+    const markupSettings = settings?.value || { global_markup: 0.20, category_markups: {} };
+    const globalMarkup = markupSettings.global_markup || 0;
+
+    const allProducts: any[] = [];
+    data.categories.forEach((cat: any) => {
+      if (cat.products) {
+        cat.products.forEach((prod: any) => {
+          const basePrice = parseFloat(prod.price);
+          const catMarkup = markupSettings.category_markups?.[cat.name] ?? globalMarkup;
+          const sellingPrice = basePrice + catMarkup;
+
+          allProducts.push({
+            id: prod.id,
+            name: prod.name,
+            type: cat.name,
+            base_price: basePrice,
+            price: sellingPrice,
+            markup: catMarkup,
+            supplier_id: 'the-socialmarket',
+            availability: Number(prod.amount) > 0,
+            stock_quantity: Number(prod.amount),
+            description: prod.description || cat.name,
+            icon_url: cat.icon || '',
+            created_at: new Date().toISOString()
+          });
+        });
+      }
+    });
+
+    // Upsert into Supabase
+    const { error: upsertError } = await supabase
+      .from('products')
+      .upsert(allProducts, { onConflict: 'id' });
+
+    if (upsertError) throw upsertError;
+
+    // Log success
+    await supabase.from('system_logs').insert({
+      event_type: 'sync_success',
+      message: `Successfully synced ${allProducts.length} products.`,
+      details: { count: allProducts.length }
+    });
+
+    console.log(`[SYNC] Success: Synced ${allProducts.length} products.`);
+  } catch (error: any) {
+    console.error('[SYNC] Failure:', error.message);
+    await supabase.from('system_logs').insert({
+      event_type: 'sync_failure',
+      message: `Sync failed: ${error.message}`,
+      details: { error: error.message }
+    });
+  }
+}
+
+// Initial sync and interval (every 10 minutes)
+syncSupplierProducts();
+setInterval(syncSupplierProducts, 10 * 60 * 1000);
+
 // ─── 2. Purchase account (Supplier API Proxy) ────────────────────────────────
 app.post('/api/reseller/purchase', async (req, res) => {
   try {
-    const { productId, supplierId } = req.body;
+    const { productId, productName, productType, supplierId, userId, amount } = req.body;
     
-    if (!productId) {
-      return res.status(400).json({ success: false, error: 'Missing productId' });
+    if (!productId || !userId || !productType) {
+      return res.status(400).json({ success: false, error: 'Missing required fields' });
     }
 
-    const apiKey = process.env.SUPPLIER_API_KEY;
-    const apiUrl = process.env.SUPPLIER_API_URL;
-    
-    if (!apiKey || !apiUrl) throw new Error("Missing supplier credentials");
+    // 1. Verify user and balance
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('wallet_balance, email')
+      .eq('id', userId)
+      .single();
 
-    const params = new URLSearchParams();
-    params.append('action', 'buyProduct');
-    params.append('id', productId);
-    params.append('amount', '1');
-    params.append('api_key', apiKey);
-
-    const supplierResp = await fetch(`${apiUrl}/buy_product.php`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: params
-    });
-
-    const data = await supplierResp.json();
-
-    if (data.status !== 'success') {
-      console.error("Supplier purchase failed:", data);
-      return res.status(400).json({ success: false, error: data.msg || 'Supplier transaction rejected.' });
+    if (profileError || !profile) throw new Error("User profile not found");
+    if (profile.wallet_balance < amount) {
+      return res.status(400).json({ success: false, error: 'Insufficient wallet balance' });
     }
 
-    const rawData = data.data?.[0] || "No Data Fetched";
-    const parts = rawData.split('|');
-    const mockCredentials = parts.length >= 2 
-      ? { username: parts[0], password: parts[1], notes: "Purchased Account Data" }
-      : { username: rawData, password: "See username string", notes: "Raw account dump" };
+    // 2. Determine if Supplier or Local
+    let credentials = null;
+    if (productType === 'supplier_product') {
+      const apiKey = process.env.SUPPLIER_API_KEY;
+      const apiUrl = process.env.SUPPLIER_API_URL;
+      if (!apiKey || !apiUrl) throw new Error("Missing supplier credentials");
+
+      const params = new URLSearchParams();
+      params.append('action', 'buyProduct');
+      params.append('id', productId);
+      params.append('amount', '1');
+      params.append('api_key', apiKey);
+
+      const supplierResp = await fetch(`${apiUrl}/buy_product.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params
+      });
+
+      const data = await supplierResp.json();
+
+      if (data.status !== 'success') {
+        console.error("Supplier purchase failed:", data);
+        await supabase.from('system_logs').insert({
+          event_type: 'order_failure',
+          message: `Supplier error: ${data.msg}`,
+          details: { productId, userId, supplierMsg: data.msg }
+        });
+        return res.status(400).json({ success: false, error: data.msg || 'Supplier transaction rejected.' });
+      }
+
+      const rawData = data.data?.[0] || "No Data Fetched";
+      const parts = rawData.split('|');
+      credentials = parts.length >= 2 
+        ? { username: parts[0], password: parts[1], notes: "Purchased Account Data" }
+        : { username: rawData, password: "See username string", notes: "Raw account dump" };
+    } else {
+      // Local gift purchase logic
+      credentials = { info: "Digital gift delivered to account room." };
+    }
+
+    // 3. Success: Deduct wallet and store order
+
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .insert({
+        user_id: userId,
+        product_id: productId,
+        product_name: req.body.productName || 'Supplier Product',
+        product_type: 'supplier_product',
+        amount,
+        status: 'completed',
+        delivery_details: credentials
+      })
+      .select()
+      .single();
+
+    if (orderError) throw orderError;
 
     res.json({
       success: true,
       data: {
-        orderId: data.trans_id || Math.floor(Math.random() * 100000),
+        orderId: order.id,
         status: 'delivered',
-        credentials: mockCredentials
+        credentials
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Purchase API Error:', error.message);
+    res.status(500).json({ success: false, error: error.message || 'Transaction failed' });
+  }
+});
+
+// ─── 8. Admin Statistics API ─────────────────────────────────────────────────
+app.get('/api/admin/stats', async (req, res) => {
+  try {
+    const { count: totalUsers } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+    const { count: totalOrders } = await supabase.from('orders').select('*', { count: 'exact', head: true });
+    const { count: activeOrders } = await supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+    
+    // Calculate total revenue
+    const { data: orderSums } = await supabase.from('orders').select('amount').eq('status', 'completed');
+    const totalRevenue = orderSums?.reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0;
+
+    res.json({
+      success: true,
+      data: {
+        totalUsers,
+        totalOrders,
+        activeOrders,
+        totalRevenue
       }
     });
   } catch (error: any) {
-    console.error('Purchase API Error:', error.message);
-    res.status(500).json({ success: false, error: 'Failed to place order with supplier' });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 

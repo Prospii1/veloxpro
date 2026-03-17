@@ -74,33 +74,18 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({ product, onClose, 
     setError('');
     
     try {
-      // 1. Call Supplier API proxy
-      const supplierResponse = await purchaseSupplierAccount(product.id, "the-socialmarket");
+      // 1. Call Supplier API proxy (Backend now handles wallet deduction and order logging)
+      const supplierResponse = await purchaseSupplierAccount(
+        product.id, 
+        product.name,
+        "the-socialmarket", 
+        user.id, 
+        price
+      );
       
       if (!supplierResponse.success) throw new Error(supplierResponse.error || "Supplier API failed.");
-      const credentials = supplierResponse.data.credentials;
-
-      // 2. Record transaction in Supabase
-      // The database trigger will automatically update the profile balance/stats
-      const { error: txError } = await supabase.from('transactions').insert([{ 
-        user_id: user.id, 
-        amount: price, 
-        type: 'debit', // standardized to match system convention
-        status: 'completed',
-        description: `Purchased supplier account: ${product.name}`,
-        payment_method: 'Wallet Balance'
-      }]);
-        
-      if (txError) throw txError;
-
-      // 3. Record account
-      await supabase.from('purchased_accounts').insert([{
-        user_id: user.id,
-        credentials,
-        status: 'Active'
-      }]);
-
-      // 4. Log the activity
+      
+      // 2. Log the activity locally for analytics
       await supabase.rpc('log_user_activity', {
         p_action_type: 'Product Purchase',
         p_description: `User purchased ${product.name} for ${formatPrice(price)}.`,
