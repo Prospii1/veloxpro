@@ -37,36 +37,6 @@ export const GiftsPage: React.FC = () => {
 
       if (error) throw error;
       setGifts(data || []);
-
-      // If no gifts, add some mock ones for beauty
-      if (!data || data.length === 0) {
-        setGifts([
-          {
-            id: '1',
-            name: 'Premium Account Bundle',
-            description: 'Get exclusive access to all premium features and early updates.',
-            price: 49.99,
-            image_url: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?q=80&w=800&auto=format&fit=crop',
-            availability_status: 'active'
-          },
-          {
-            id: '2',
-            name: 'Verified Status Badge',
-            description: 'Stand out from the crowd with a verified badge on your profile.',
-            price: 19.99,
-            image_url: 'https://images.unsplash.com/photo-1614680376593-902f74cf0d41?q=80&w=800&auto=format&fit=crop',
-            availability_status: 'active'
-          },
-          {
-            id: '3',
-            name: 'VIP Support Pass',
-            description: 'Priority 24/7 support with personal account manager.',
-            price: 29.99,
-            image_url: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=800&auto=format&fit=crop',
-            availability_status: 'active'
-          }
-        ]);
-      }
     } catch (err) {
       console.error('Error fetching gifts:', err);
     } finally {
@@ -107,8 +77,8 @@ export const GiftsPage: React.FC = () => {
             <Sparkles size={16} />
             Exclusive Rewards
           </motion.div>
-          <h1 className="text-4xl md:text-5xl font-bold font-display mb-4">Digital Gifts</h1>
-          <p className="text-lg text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
+          <h1 className="text-4xl md:text-5xl font-bold font-display mb-4 text-[#1F2937]">Order a Gift</h1>
+          <p className="text-lg text-slate-500 max-w-2xl mx-auto">
             Unlock premium perks, status symbols, and exclusive digital assets managed directly by VeloxPro.
           </p>
         </div>
@@ -116,7 +86,13 @@ export const GiftsPage: React.FC = () => {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-4">
             <Loader2 size={40} className="animate-spin text-primary" />
-            <p className="text-slate-500 dark:text-slate-400 font-medium">Loading exclusive items...</p>
+            <p className="text-slate-500 font-medium">Loading exclusive items...</p>
+          </div>
+        ) : gifts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-24 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm text-center">
+            <Gift size={56} className="text-slate-300 mb-6" />
+            <h3 className="text-2xl font-bold font-display text-[#1F2937] mb-2">No gifts currently available</h3>
+            <p className="text-slate-500 max-w-md">We're updating our inventory. Check back soon for exclusive rewards and premium digital assets.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -130,7 +106,7 @@ export const GiftsPage: React.FC = () => {
                   className="group relative"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-[2.5rem] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="glass overflow-hidden rounded-[2.5rem] border-white/10 relative h-full flex flex-col">
+                  <div className="bg-white overflow-hidden rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-lg relative h-full flex flex-col transition-shadow">
                     <div className="h-48 overflow-hidden relative">
                       <img 
                         src={gift.image_url} 
@@ -144,8 +120,8 @@ export const GiftsPage: React.FC = () => {
                     </div>
                     
                     <div className="p-8 flex-1 flex flex-col">
-                      <h3 className="text-2xl font-bold font-display mb-3 group-hover:text-primary transition-colors">{gift.name}</h3>
-                      <p className="text-slate-500 dark:text-slate-400 text-sm mb-6 flex-1">{gift.description}</p>
+                      <h3 className="text-2xl font-bold font-display mb-3 text-[#1F2937] group-hover:text-primary transition-colors">{gift.name}</h3>
+                      <p className="text-slate-500 text-sm mb-6 flex-1">{gift.description}</p>
                       
                       <div className="flex items-center justify-between mt-auto pt-6 border-t border-white/5">
                         <div className="flex flex-col">

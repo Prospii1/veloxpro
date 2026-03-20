@@ -5,6 +5,7 @@ import { fetchResellerProducts, SupplierCategory } from '../services/api';
 import { Service } from '../types';
 import { Search, Loader2 } from 'lucide-react';
 import { cn } from '../utils';
+import { normalizeCategory } from '../utils/category';
 
 interface AllProductsProps {
   onAddToCart: (service: Service) => void;
@@ -27,23 +28,39 @@ export const AllProducts: React.FC<AllProductsProps> = ({ onAddToCart, initialCa
         if (payload && payload.products.length > 0) {
           setCategories(payload.categories);
 
-          const mappedServices: Service[] = payload.products.map((product) => ({
-            id: product.id,
-            name: product.name,
-            platform: product.type,
-            type: product.type,
-            category: 'External Services',
-            pricePer1000: product.price,
-            minOrder: 1,
-            maxOrder: 1,
-            description: product.description,
-            features: ['Instant Delivery', 'Premium Quality', 'Secured'],
-            icon: product.iconUrl || 'Zap',
-            deliveryTime: 'Instant',
-            rating: 5.0,
-            reviews: Math.floor(Math.random() * 500) + 50
-          }));
+          const mappedServices: Service[] = payload.products.map((product) => {
+            const normalizedName = normalizeCategory(product.type);
+            return {
+              id: product.id,
+              name: product.name,
+              platform: normalizedName as any,
+              type: normalizedName,
+              category: 'External Services',
+              pricePer1000: product.price,
+              minOrder: 1,
+              maxOrder: 1,
+              description: product.description,
+              features: ['Instant Delivery', 'Premium Quality', 'Secured'],
+              icon: product.iconUrl || 'Zap',
+              deliveryTime: 'Instant',
+              rating: 5.0,
+              reviews: Math.floor(Math.random() * 500) + 50
+            };
+          });
+
+          // Normalize and deduplicate categories for tabs
+          const seen = new Set<string>();
+          const uniqueCategories: SupplierCategory[] = [];
+
+          payload.categories.forEach(cat => {
+            const normalized = normalizeCategory(cat.name);
+            if (!seen.has(normalized)) {
+              seen.add(normalized);
+              uniqueCategories.push({ ...cat, name: normalized });
+            }
+          });
           
+          setCategories(uniqueCategories);
           setServices(mappedServices);
         }
       } catch (e) {
@@ -66,8 +83,8 @@ export const AllProducts: React.FC<AllProductsProps> = ({ onAddToCart, initialCa
     <div className="pt-24 pb-20 px-4 md:px-6 max-w-7xl mx-auto min-h-screen">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12">
         <div>
-          <h1 className="text-4xl md:text-5xl font-bold font-display mb-4 dark:text-white">All Products</h1>
-          <p className="text-slate-500 max-w-xl dark:text-slate-400">
+          <h1 className="text-4xl md:text-5xl font-bold font-display mb-4 text-[#1F2937]">All Products</h1>
+          <p className="text-[#6B7280] max-w-xl">
             Browse our complete catalog of premium accounts, digital services, and subscriptions powered directly by our live supplier network.
           </p>
         </div>
@@ -79,8 +96,7 @@ export const AllProducts: React.FC<AllProductsProps> = ({ onAddToCart, initialCa
               type="text"
               placeholder="Search all products..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full sm:w-72 pl-10 pr-4 py-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all dark:text-white"
+              className="w-full sm:w-72 pl-10 pr-4 py-3 rounded-xl bg-white border border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-slate-900"
             />
           </div>
         </div>
@@ -94,7 +110,7 @@ export const AllProducts: React.FC<AllProductsProps> = ({ onAddToCart, initialCa
             "px-5 py-2 rounded-full text-sm font-medium transition-all",
             activeCategory === 'All' 
               ? "bg-primary text-white shadow-lg shadow-primary/20" 
-              : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:border-primary/50"
+              : "bg-white text-[#6B7280] border border-slate-200 hover:border-primary/50"
           )}
         >
           All
@@ -107,7 +123,7 @@ export const AllProducts: React.FC<AllProductsProps> = ({ onAddToCart, initialCa
               "px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2",
               activeCategory === cat.name 
                 ? "bg-primary text-white shadow-lg shadow-primary/20" 
-                : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:border-primary/50"
+                : "bg-white text-[#6B7280] border border-slate-200 hover:border-primary/50"
             )}
           >
             {cat.icon && (
@@ -123,7 +139,7 @@ export const AllProducts: React.FC<AllProductsProps> = ({ onAddToCart, initialCa
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 relative min-h-[400px]"
       >
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm z-10 rounded-3xl">
+          <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-sm z-10 rounded-3xl">
             <Loader2 className="animate-spin text-primary" size={40} />
           </div>
         )}
@@ -145,10 +161,10 @@ export const AllProducts: React.FC<AllProductsProps> = ({ onAddToCart, initialCa
 
       {filteredServices.length === 0 && !loading && (
         <div className="py-20 text-center">
-          <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
+          <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
             <Search size={32} />
           </div>
-          <h3 className="text-xl font-bold mb-2 dark:text-white">No products found</h3>
+          <h3 className="text-xl font-bold mb-2 text-[#1F2937]">No products found</h3>
           <p className="text-slate-500">We couldn't find any products in this category. Try adjusting your search.</p>
         </div>
       )}

@@ -123,8 +123,8 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({ product, onClose, 
             <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mb-6">
               <CheckCircle2 size={48} className="text-emerald-500" />
             </div>
-            <h2 className="text-2xl font-bold font-display text-slate-900 dark:text-white mb-2">Success!</h2>
-            <p className="text-slate-500">Your account is ready in the Account Room.</p>
+            <h2 className="text-2xl font-bold font-display text-[#1F2937] dark:text-white mb-2">Success!</h2>
+            <p className="text-[#6B7280] dark:text-slate-400">Your account is ready in the Account Room.</p>
           </div>
         ) : otpStep ? (
           <div className="py-4">
@@ -133,8 +133,8 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({ product, onClose, 
                 <ShieldCheck size={24} />
               </div>
               <div>
-                <h2 className="text-2xl font-bold font-display dark:text-white">Security Check</h2>
-                <p className="text-sm text-slate-500">Enter the 6-digit code sent to your email.</p>
+                <h2 className="text-2xl font-bold font-display text-[#1F2937] dark:text-white">Security Check</h2>
+                <p className="text-sm text-[#6B7280] dark:text-slate-400">Enter the 6-digit code sent to your email.</p>
               </div>
             </div>
 
@@ -174,14 +174,14 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({ product, onClose, 
           </div>
         ) : (
           <div className="pt-2">
-            <h2 className="text-2xl font-bold font-display mb-6 dark:text-white">Confirm Purchase</h2>
+            <h2 className="text-2xl font-bold font-display mb-6 text-[#1F2937] dark:text-white">Confirm Purchase</h2>
             
             <div className="space-y-4 mb-8">
               <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-                <p className="text-[10px] uppercase text-slate-400 font-bold mb-1">Product</p>
-                <p className="font-bold text-slate-900 dark:text-white line-clamp-1">{product.name}</p>
+                <p className="text-[10px] uppercase text-[#6B7280] font-bold mb-1">Product</p>
+                <p className="font-bold text-[#1F2937] dark:text-white line-clamp-1">{product.name}</p>
                 <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center">
-                  <span className="text-sm font-bold text-slate-500">Price</span>
+                  <span className="text-sm font-bold text-[#6B7280] dark:text-slate-400">Price</span>
                   <span className="text-xl font-black text-primary">{formatPrice(price)}</span>
                 </div>
               </div>

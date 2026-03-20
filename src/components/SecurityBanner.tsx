@@ -28,8 +28,8 @@ export const SecurityBanner: React.FC = () => {
                 <ShieldAlert size={24} />
                 <h2 className="text-2xl font-black uppercase tracking-tight font-display">Security Alert</h2>
               </div>
-              <h3 className="text-4xl font-bold font-display">Beware of Impersonators</h3>
-              <p className="text-slate-500 max-w-xl">
+              <h3 className="text-4xl font-bold font-display text-[#1F2937] dark:text-white">Beware of Impersonators</h3>
+              <p className="text-[#6B7280] max-w-xl dark:text-slate-400">
                 Your security is our top priority. Please read these important safety guidelines to protect your account and funds.
               </p>
             </div>
@@ -61,8 +61,8 @@ export const SecurityBanner: React.FC = () => {
                   <div className="w-10 h-10 rounded-xl bg-red-500/10 text-red-500 flex items-center justify-center mb-4">
                     <item.icon size={20} />
                   </div>
-                  <h4 className="font-bold mb-2">{item.title}</h4>
-                  <p className="text-sm text-slate-500 leading-relaxed">{item.text}</p>
+                  <h4 className="font-bold mb-2 text-[#1F2937] dark:text-white">{item.title}</h4>
+                  <p className="text-sm text-[#6B7280] leading-relaxed dark:text-slate-400">{item.text}</p>
                 </div>
               ))}
             </div>

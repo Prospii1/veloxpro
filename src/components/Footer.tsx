@@ -1,7 +1,13 @@
 import React from 'react';
 import { Zap, Instagram, Twitter, Youtube, Facebook, Music2, Mail, MapPin, Phone } from 'lucide-react';
 
-export const Footer: React.FC = () => {
+interface FooterProps {
+  onTermsClick?: () => void;
+  onContactClick?: () => void;
+  onApiDocsClick?: () => void;
+}
+
+export const Footer: React.FC<FooterProps> = ({ onTermsClick, onContactClick, onApiDocsClick }) => {
   return (
     <footer className="bg-white dark:bg-slate-950 border-t border-slate-100 dark:border-slate-900 pt-20 pb-10 px-6">
       <div className="max-w-7xl mx-auto">
@@ -26,11 +32,11 @@ export const Footer: React.FC = () => {
                   }}
                 />
               </div>
-              <span className="text-xl font-bold tracking-tight font-display dark:text-white">
+              <span className="text-xl font-bold tracking-tight font-display text-[#1F2937] dark:text-white">
                 VeloxPro
               </span>
             </div>
-            <p className="text-slate-500 leading-relaxed">
+            <p className="text-[#6B7280] leading-relaxed">
               The world's leading SMM platform providing high-quality social media marketing services at competitive prices.
             </p>
             <div className="flex items-center gap-4">
@@ -43,48 +49,54 @@ export const Footer: React.FC = () => {
           </div>
 
           <div>
-            <h4 className="font-bold mb-6">Quick Links</h4>
+            <h4 className="font-bold mb-6 text-[#1F2937] dark:text-white">Quick Links</h4>
             <ul className="space-y-4">
               {['Services', 'API Documentation', 'Affiliate Program', 'Support Center', 'Blog'].map((item, i) => (
                 <li key={i}>
-                  <a href="#" className="text-slate-500 hover:text-primary transition-colors">{item}</a>
+                  <button 
+                    onClick={
+                      item === 'Support Center' ? onContactClick : 
+                      item === 'API Documentation' ? onApiDocsClick : 
+                      undefined
+                    }
+                    className="text-[#6B7280] hover:text-primary transition-colors text-left"
+                  >
+                    {item}
+                  </button>
                 </li>
               ))}
             </ul>
           </div>
 
           <div>
-            <h4 className="font-bold mb-6">Legal</h4>
+            <h4 className="font-bold mb-6 text-[#1F2937] dark:text-white">Legal</h4>
             <ul className="space-y-4">
-              {['Terms of Service', 'Privacy Policy', 'Refund Policy', 'Cookie Policy', 'GDPR'].map((item, i) => (
+              {['Terms of Service', 'Refund Policy', 'Cookie Policy', 'GDPR'].map((item, i) => (
                 <li key={i}>
-                  <a href="#" className="text-slate-500 hover:text-primary transition-colors">{item}</a>
+                  <button 
+                    onClick={item === 'Terms of Service' ? onTermsClick : undefined}
+                    className="text-[#6B7280] hover:text-primary transition-colors text-left"
+                  >
+                    {item}
+                  </button>
                 </li>
               ))}
             </ul>
           </div>
 
           <div>
-            <h4 className="font-bold mb-6">Contact Us</h4>
+            <h4 className="font-bold mb-6 text-[#1F2937] dark:text-white">Contact Us</h4>
             <ul className="space-y-4">
-              <li className="flex items-start gap-3 text-slate-500">
+              <li className="flex items-start gap-3 text-[#6B7280]">
                 <Mail size={18} className="text-primary shrink-0" />
-                <span>support@veloxpro.com</span>
-              </li>
-              <li className="flex items-start gap-3 text-slate-500">
-                <Phone size={18} className="text-primary shrink-0" />
-                <span>+1 (555) 000-0000</span>
-              </li>
-              <li className="flex items-start gap-3 text-slate-500">
-                <MapPin size={18} className="text-primary shrink-0" />
-                <span>123 Growth St, San Francisco, CA 94103</span>
+                <span>Veloxmediaservice@yahoo.com</span>
               </li>
             </ul>
           </div>
         </div>
 
         <div className="pt-8 border-t border-slate-100 dark:border-slate-900 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-[#6B7280]">
             © 2026 VeloxPro. All rights reserved.
           </p>
           <div className="flex items-center gap-6">

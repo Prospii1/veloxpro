@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../utils';
 import { useAuth } from '../contexts/AuthContext';
 import { useCurrency } from '../contexts/CurrencyContext';
+import { normalizeCategory } from '../utils/category';
 
 interface NavbarProps {
   cartCount: number;
@@ -15,7 +16,6 @@ interface NavbarProps {
   onFundWalletClick: () => void;
   onLoginClick: () => void;
   onSignupClick: () => void;
-  onAccountRoomClick: () => void;
   onOrderHistoryClick: () => void;
   onNumberVerificationClick: () => void;
   onGiftsClick: () => void;
@@ -23,6 +23,8 @@ interface NavbarProps {
   isDarkMode: boolean;
   toggleDarkMode: () => void;
   showSecondaryNav?: boolean;
+  onTermsClick?: () => void;
+  onApiDocsClick?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ 
@@ -35,20 +37,21 @@ export const Navbar: React.FC<NavbarProps> = ({
   onFundWalletClick,
   onLoginClick,
   onSignupClick,
-  onAccountRoomClick,
   onOrderHistoryClick,
   onNumberVerificationClick,
   onGiftsClick,
   onAdminClick,
   isDarkMode,
   toggleDarkMode,
-  showSecondaryNav = true
+  showSecondaryNav = true,
+  onTermsClick,
+  onApiDocsClick
 }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCurrencyOpen, setIsCurrencyOpen] = useState(false);
   const { user, profile, signOut } = useAuth();
-  const { currency, setCurrency } = useCurrency();
+  const { currency, setCurrency, formatPrice } = useCurrency();
   const [categories, setCategories] = useState<{ name: string; icon: string }[]>([]);
 
   useEffect(() => {
@@ -61,7 +64,17 @@ export const Navbar: React.FC<NavbarProps> = ({
         const fetchResellerProducts = (await import('../services/api')).fetchResellerProducts;
         const resp = await fetchResellerProducts();
         if (resp && resp.categories) {
-          setCategories(resp.categories);
+          const seen = new Set<string>();
+          const uniqueCategories: { name: string; icon: string }[] = [];
+
+          resp.categories.forEach(cat => {
+            const normalized = normalizeCategory(cat.name);
+            if (!seen.has(normalized)) {
+              seen.add(normalized);
+              uniqueCategories.push({ ...cat, name: normalized });
+            }
+          });
+          setCategories(uniqueCategories);
         }
       } catch(e) {}
     };
@@ -79,7 +92,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     <>
     <nav className={cn(
       "fixed top-0 left-0 right-0 z-40 transition-all duration-300",
-      isScrolled ? "bg-white/90 dark:bg-slate-900/90 backdrop-blur-md shadow-sm" : "bg-white dark:bg-slate-900"
+      isScrolled ? "bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-sm border-b border-slate-100 dark:border-slate-800" : "bg-white dark:bg-slate-900"
     )}>
       {/* Top Bar */}
       <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
@@ -112,25 +125,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }}
               />
             </div>
-            <span className="text-xl font-bold font-display tracking-tight dark:text-white">VeloxPro</span>
+            <span className="text-xl font-bold font-display tracking-tight text-[#1F2937] dark:text-white">VeloxPro</span>
           </div>
         </div>
 
         <div className="flex items-center gap-2 md:gap-4">
-          {/* Desktop/Tablet Dark Mode Toggle */}
-          <button 
-            onClick={toggleDarkMode}
-            className="hidden md:flex p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-400"
-          >
-            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-          </button>
-
           {/* Global Currency Dropdown */}
           <div className="relative">
             <button 
               onClick={() => setIsCurrencyOpen(!isCurrencyOpen)}
               onBlur={() => setTimeout(() => setIsCurrencyOpen(false), 200)}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-xs font-bold dark:text-white border border-transparent hover:border-primary/20"
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-xs font-bold text-[#1F2937] dark:text-white border border-transparent hover:border-primary/20"
             >
               <Globe size={14} className="text-primary" />
               <span>{currency}</span>
@@ -172,28 +177,22 @@ export const Navbar: React.FC<NavbarProps> = ({
             {user ? (
               <div className="flex items-center gap-4">
                 <button 
-                  onClick={onAccountRoomClick}
-                  className="text-sm font-bold px-2 py-2 hover:text-primary transition-colors dark:text-slate-300"
-                >
-                  Account Room
-                </button>
-                <button 
                   onClick={onOrderHistoryClick}
-                  className="text-sm font-bold px-2 py-2 hover:text-primary transition-colors dark:text-slate-300"
+                  className="text-sm font-bold px-2 py-2 text-[#1F2937] dark:text-slate-300 hover:text-primary transition-colors"
                 >
                   Order History
                 </button>
                 <button 
                   onClick={onNumberVerificationClick}
-                  className="text-sm font-bold px-2 py-2 hover:text-primary transition-colors dark:text-slate-300"
+                  className="text-sm font-bold px-2 py-2 text-[#1F2937] dark:text-slate-300 hover:text-primary transition-colors"
                 >
                   Number Verification
                 </button>
                 <button 
                   onClick={onGiftsClick}
-                  className="text-sm font-bold px-2 py-2 hover:text-primary transition-colors dark:text-slate-300"
+                  className="text-sm font-bold px-2 py-2 text-[#1F2937] dark:text-slate-300 hover:text-primary transition-colors"
                 >
-                  Gifts
+                  Order a Gift
                 </button>
                 {profile?.role === 'Admin' && (
                   <button 
@@ -205,7 +204,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 )}
                 <button 
                   onClick={onProfileClick}
-                  className="text-sm font-bold px-2 py-2 hover:text-primary transition-colors dark:text-slate-300"
+                  className="text-sm font-bold px-2 py-2 text-[#1F2937] dark:text-slate-300 hover:text-primary transition-colors"
                 >
                   Profile
                 </button>
@@ -215,14 +214,26 @@ export const Navbar: React.FC<NavbarProps> = ({
                 >
                   Fund Wallet
                 </button>
+                <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 py-1.5 px-3 rounded-full cursor-default border border-emerald-100 dark:border-emerald-800">
+                  <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                    {formatPrice(profile?.wallet_balance || 0)}
+                  </span>
+                </div>
                 <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 py-1.5 px-3 rounded-full cursor-default">
                   <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white text-xs">
                     <User size={14} />
                   </div>
-                  <span className="text-sm font-bold dark:text-white">
+                  <span className="text-sm font-bold text-[#1F2937] dark:text-white">
                     {user.user_metadata?.username || user.email?.split('@')[0]}
                   </span>
                 </div>
+                <button 
+                  onClick={toggleDarkMode}
+                  className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-yellow-400 hover:scale-110 transition-all border border-slate-200 dark:border-slate-700"
+                  title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                >
+                  {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+                </button>
                 <button 
                   onClick={signOut}
                   className="text-sm font-bold px-4 py-2 text-red-500 hover:text-red-600 transition-colors"
@@ -233,8 +244,15 @@ export const Navbar: React.FC<NavbarProps> = ({
             ) : (
               <>
                 <button 
+                  onClick={toggleDarkMode}
+                  className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-yellow-400 hover:scale-110 transition-all border border-slate-200 dark:border-slate-700"
+                  title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                >
+                  {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+                </button>
+                <button 
                   onClick={onLoginClick}
-                  className="text-sm font-bold px-4 py-2 hover:text-primary transition-colors dark:text-slate-300"
+                  className="text-sm font-bold px-4 py-2 text-[#1F2937] dark:text-slate-300 hover:text-primary transition-colors"
                 >
                   Login
                 </button>
@@ -262,7 +280,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Secondary Navigation (Horizontal Scroll on Mobile) */}
       {showSecondaryNav && (
-        <div className="max-w-7xl mx-auto px-4 md:px-6 h-12 flex items-center overflow-x-auto no-scrollbar border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 h-12 flex items-center overflow-x-auto no-scrollbar border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/50">
           <div className="flex items-center gap-6 md:gap-8 whitespace-nowrap">
             {navItems.map((item, i) => (
               <button
@@ -270,7 +288,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={item.action}
                 className={cn(
                   "text-xs md:text-sm font-bold transition-colors",
-                  "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                  "text-[#6B7280] hover:text-[#1F2937] dark:hover:text-white"
                 )}
               >
                 {item.label}
@@ -301,13 +319,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <div className="p-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-3">
-                <span className="font-display font-bold text-xl dark:text-white">Menu</span>
-                <button 
-                  onClick={toggleDarkMode}
-                  className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
-                >
-                  {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-                </button>
+                <span className="font-display font-bold text-xl text-[#1F2937] dark:text-white">Menu</span>
               </div>
               <button 
                 onClick={() => setIsMobileMenuOpen(false)}
@@ -332,7 +344,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
               
               <div className="my-2 border-t border-slate-100 dark:border-slate-800" />
-              <span className="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Categories</span>
+              <span className="px-4 text-xs font-bold text-[#6B7280] dark:text-slate-400 uppercase tracking-wider mb-2">Categories</span>
               
               {categories.map((cat, i) => (
                 <button 
@@ -352,12 +364,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               {user ? (
                 <>
                   <button 
-                    onClick={() => { onAccountRoomClick(); setIsMobileMenuOpen(false); }}
-                    className="w-full text-left px-4 py-3 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3"
-                  >
-                    Account Room
-                  </button>
-                  <button 
                     onClick={() => { onOrderHistoryClick(); setIsMobileMenuOpen(false); }}
                     className="w-full text-left px-4 py-3 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3"
                   >
@@ -373,7 +379,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     onClick={() => { onGiftsClick(); setIsMobileMenuOpen(false); }}
                     className="w-full text-left px-4 py-3 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3"
                   >
-                    Gifts
+                    Order a Gift
                   </button>
                   {profile?.role === 'Admin' && (
                     <button 
@@ -395,6 +401,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                   >
                     Fund Wallet
                   </button>
+                  <div className="my-2 border-t border-slate-100 dark:border-slate-800" />
+                  <button 
+                    onClick={() => { onApiDocsClick?.(); setIsMobileMenuOpen(false); }}
+                    className="w-full text-left px-4 py-3 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3"
+                  >
+                    API Documentation
+                  </button>
+                  <button 
+                    onClick={() => { onTermsClick?.(); setIsMobileMenuOpen(false); }}
+                    className="w-full text-left px-4 py-3 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3"
+                  >
+                    Terms of Service
+                  </button>
                 </>
               ) : (
                 <>
@@ -410,22 +429,47 @@ export const Navbar: React.FC<NavbarProps> = ({
                   >
                     Sign Up
                   </button>
+                  <div className="my-2 border-t border-slate-100 dark:border-slate-800" />
+                  <button 
+                    onClick={toggleDarkMode}
+                    className="w-full py-3 rounded-xl font-bold bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center gap-2"
+                  >
+                    {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
+                    {isDarkMode ? 'Light Mode' : 'Dark Mode'}
+                  </button>
                 </>
               )}
             </div>
 
             {user && (
               <div className="p-4 border-t border-slate-100 dark:border-slate-800">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white">
-                    <User size={20} />
-                  </div>
-                  <div>
-                    <div className="font-bold dark:text-white text-sm">
-                      {user.user_metadata?.username || 'User'}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white">
+                      <User size={20} />
+                    </div>
+                    <div>
+                      <div className="font-bold text-[#1F2937] dark:text-white">
+                        {user.user_metadata?.username || 'User'}
+                      </div>
+                      <div className="text-xs text-[#6B7280] dark:text-slate-400">
+                        {user.email}
+                      </div>
                     </div>
                   </div>
+                  <div className="bg-emerald-50 dark:bg-emerald-900/20 py-1 px-3 rounded-full border border-emerald-100 dark:border-emerald-800 flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                      {formatPrice(profile?.wallet_balance || 0)}
+                    </span>
+                  </div>
                 </div>
+                <button 
+                  onClick={toggleDarkMode}
+                  className="w-full py-3 rounded-xl font-bold bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center gap-2 mb-2"
+                >
+                  {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+                  {isDarkMode ? 'Light Mode' : 'Dark Mode'}
+                </button>
                 <button 
                   onClick={() => { signOut(); setIsMobileMenuOpen(false); }}
                   className="w-full py-3 rounded-xl font-bold bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400"

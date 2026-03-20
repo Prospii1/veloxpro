@@ -129,7 +129,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onLoginClick }) => {
                   "w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-all group",
                   activeTab === item.id
                     ? "bg-primary text-white shadow-lg shadow-primary/20"
-                    : "text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                    : "text-[#6B7280] hover:text-[#1F2937] dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50"
                 )}
               >
                 <div className="flex items-center gap-3">
@@ -168,9 +168,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onLoginClick }) => {
                 <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", stat.bg)}>
                   <stat.icon size={20} className={stat.color} />
                 </div>
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{stat.label}</span>
+                <span className="text-xs font-bold text-[#6B7280] uppercase tracking-wider">{stat.label}</span>
               </div>
-              <h3 className="text-2xl font-bold dark:text-white">{formatPrice(stat.value)}</h3>
+              <h3 className="text-2xl font-bold text-[#1F2937] dark:text-white">{formatPrice(stat.value)}</h3>
             </motion.div>
           ))}
         </div>
@@ -187,8 +187,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onLoginClick }) => {
             >
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                 <div>
-                  <h2 className="text-2xl font-bold font-display dark:text-white mb-1">Personal Information</h2>
-                  <p className="text-slate-500 text-sm">Manage your account identity and contact details.</p>
+                  <h2 className="text-2xl font-bold font-display text-[#1F2937] dark:text-white mb-1">Personal Information</h2>
+                  <p className="text-[#6B7280] text-sm">Manage your account identity and contact details.</p>
                 </div>
                 
                 {!editing ? (
@@ -238,12 +238,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onLoginClick }) => {
                   { label: 'Signup Date', value: new Date(profile.created_at).toLocaleDateString(undefined, { dateStyle: 'long' }), icon: Calendar, readonly: true },
                   { label: 'Last Login', value: user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString() : '—', icon: Clock, readonly: true },
                 ].map((field) => (
-                  <div key={field.label} className="group p-5 rounded-2xl bg-white/50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 transition-all hover:shadow-lg hover:shadow-black/[0.02]">
+                  <div key={field.label} className="group p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 transition-all hover:shadow-lg hover:shadow-black/[0.02]">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
+                      <div className="w-8 h-8 rounded-lg bg-[#F3F4F6] dark:bg-slate-800 flex items-center justify-center text-[#6B7280]">
                         <field.icon size={16} />
                       </div>
-                      <span className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em]">{field.label}</span>
+                      <span className="text-[10px] uppercase font-black text-[#6B7280] dark:text-slate-400 tracking-[0.2em]">{field.label}</span>
                     </div>
                     
                     {editing && !field.readonly && field.key ? (
@@ -252,10 +252,10 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onLoginClick }) => {
                         value={(formData as any)[field.key]}
                         onChange={(e) => setFormData(prev => ({ ...prev, [field.key!]: e.target.value }))}
                         placeholder={`Enter your ${field.label.toLowerCase()}`}
-                        className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl px-4 py-2.5 text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/20 outline-none"
+                        className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl px-4 py-2.5 text-sm font-bold text-[#1F2937] dark:text-white focus:ring-2 focus:ring-primary/20 outline-none"
                       />
                     ) : (
-                      <p className="text-sm font-bold text-slate-900 dark:text-white truncate px-1">
+                      <p className="text-sm font-bold text-[#1F2937] dark:text-white truncate px-1">
                         {field.value}
                       </p>
                     )}
@@ -274,18 +274,18 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onLoginClick }) => {
               className="glass p-8 rounded-[2.5rem]"
             >
               <div className="mb-8">
-                <h2 className="text-2xl font-bold font-display dark:text-white mb-1">Security Settings</h2>
-                <p className="text-slate-500 text-sm">Protect your account and transactions with enhanced security features.</p>
+                <h2 className="text-2xl font-bold font-display text-[#1F2937] dark:text-white mb-1">Security Settings</h2>
+                <p className="text-[#6B7280] text-sm">Protect your account and transactions with enhanced security features.</p>
               </div>
 
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-6 rounded-[2rem] bg-slate-50/50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
+                <div className="flex items-center justify-between p-6 rounded-[2rem] bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
                       <ShieldCheck size={24} />
                     </div>
                     <div>
-                      <h3 className="font-bold dark:text-white">OTP Verification</h3>
+                      <h3 className="font-bold text-[#1F2937] dark:text-white">OTP Verification</h3>
                       <p className="text-sm text-slate-500 max-w-sm">Require a code for sensitive actions like funding and large purchases.</p>
                     </div>
                   </div>
@@ -322,7 +322,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onLoginClick }) => {
               className="glass p-8 rounded-[2.5rem]"
             >
               <div className="mb-8">
-                <h2 className="text-2xl font-bold font-display dark:text-white mb-1">Change Password</h2>
+                <h2 className="text-2xl font-bold font-display text-[#1F2937] dark:text-white mb-1">Change Password</h2>
                 <p className="text-slate-500 text-sm">Ensure your account is secure by using a strong password.</p>
               </div>
 
@@ -401,8 +401,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onLoginClick }) => {
               className="glass p-8 rounded-[2.5rem]"
             >
               <div className="mb-8">
-                <h2 className="text-2xl font-bold font-display dark:text-white mb-1">Activity Log</h2>
-                <p className="text-slate-500 text-sm">Monitor recent security and account events.</p>
+                <h2 className="text-2xl font-bold font-display text-[#1F2937] dark:text-white mb-1">Activity Log</h2>
+                <p className="text-[#6B7280] text-sm">Monitor recent security and account events.</p>
               </div>
 
               <div className="overflow-x-auto -mx-2">
@@ -429,8 +429,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onLoginClick }) => {
               className="glass p-8 rounded-[2.5rem]"
             >
               <div className="mb-8">
-                <h2 className="text-2xl font-bold font-display dark:text-white mb-1">Financial History</h2>
-                <p className="text-slate-500 text-sm">Track your wallet funding and purchase transactions.</p>
+                <h2 className="text-2xl font-bold font-display text-[#1F2937] dark:text-white mb-1">Financial History</h2>
+                <p className="text-[#6B7280] text-sm">Track your wallet funding and purchase transactions.</p>
               </div>
 
               <div className="overflow-x-auto -mx-2">
@@ -475,7 +475,7 @@ const ActivityRows: React.FC<{ userId: string }> = ({ userId }) => {
   return (
     <tbody>
       {logs.map((log) => (
-        <tr key={log.id} className="group bg-white/50 dark:bg-slate-900/50 hover:bg-white dark:hover:bg-slate-900 transition-colors">
+        <tr key={log.id} className="group bg-slate-50/50 dark:bg-slate-900/50 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">
           <td className="px-6 py-4 rounded-l-2xl border-l border-t border-b border-slate-100 dark:border-slate-800">
             <span className="text-sm font-bold text-slate-900 dark:text-white">{log.action_type}</span>
           </td>
@@ -515,7 +515,7 @@ const TransactionRows: React.FC<{ userId: string, formatPrice: (a: number) => st
   return (
     <tbody>
       {txs.map((tx) => (
-        <tr key={tx.id} className="group bg-white/50 dark:bg-slate-900/50 hover:bg-white dark:hover:bg-slate-900 transition-colors">
+        <tr key={tx.id} className="group bg-slate-50/50 dark:bg-slate-900/50 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">
           <td className="px-6 py-4 rounded-l-2xl border-l border-t border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-3">
               <div className={cn(

@@ -8,7 +8,6 @@ export const Hero: React.FC = () => {
   const images = [
     "/assets/verification.png",
     "/assets/security.png",
-    "/assets/presence.png",
   ];
 
   return (
@@ -29,11 +28,11 @@ export const Hero: React.FC = () => {
           { icon: Globe, label: 'Global Support', color: 'text-blue-500' },
           { icon: Star, label: 'Premium Quality', color: 'text-primary' },
         ].map((feature, i) => (
-          <div key={i} className="glass p-3 md:p-4 rounded-xl md:rounded-2xl flex items-center gap-2 md:gap-3 border-white/5">
-            <div className={cn("w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-white/5 flex items-center justify-center shrink-0", feature.color)}>
+          <div key={i} className="glass p-3 md:p-4 rounded-xl md:rounded-2xl flex items-center gap-2 md:gap-3 border-[#E5E7EB] dark:border-white/5">
+            <div className={cn("w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center shrink-0", feature.color)}>
               <feature.icon size={16} className="md:w-5 md:h-5" />
             </div>
-            <span className="text-[10px] md:text-sm font-bold leading-tight">{feature.label}</span>
+            <span className="text-[10px] md:text-sm font-bold leading-tight text-[#1F2937] dark:text-white">{feature.label}</span>
           </div>
         ))}
       </div>

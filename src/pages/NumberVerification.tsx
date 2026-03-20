@@ -57,7 +57,7 @@ export const NumberVerification: React.FC = () => {
             <Globe size={16} />
             Global Reach
           </motion.div>
-          <h1 className="text-4xl md:text-5xl font-bold font-display mb-4">Number Verification</h1>
+          <h1 className="text-4xl md:text-5xl font-bold font-display text-[#1F2937] dark:text-white mb-4">Number Verification</h1>
           <p className="text-lg text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
             Instantly verify phone numbers, carrier details, and line types using our premium supplier API.
           </p>

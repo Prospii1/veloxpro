@@ -28,8 +28,8 @@ export const Testimonials: React.FC = () => {
     <section className="py-20 px-6 bg-slate-50 dark:bg-slate-900/50">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold font-display mb-4">What Our Clients Say</h2>
-          <p className="text-slate-500 max-w-2xl mx-auto">Don't just take our word for it. Join thousands of satisfied customers growing their social presence with us.</p>
+          <h2 className="text-3xl md:text-4xl font-bold font-display mb-4 text-[#1F2937] dark:text-white">What Our Clients Say</h2>
+          <p className="text-[#6B7280] max-w-2xl mx-auto dark:text-slate-400">Don't just take our word for it. Join thousands of satisfied customers growing their social presence with us.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -48,7 +48,7 @@ export const Testimonials: React.FC = () => {
                 {[1, 2, 3, 4, 5].map((star) => <Star key={star} size={16} fill="currentColor" />)}
               </div>
 
-              <p className="text-slate-600 dark:text-slate-400 mb-8 italic">
+              <p className="text-[#6B7280] dark:text-slate-400 mb-8 italic">
                 "{testimonial.content}"
               </p>
 
@@ -60,8 +60,8 @@ export const Testimonials: React.FC = () => {
                   referrerPolicy="no-referrer"
                 />
                 <div>
-                  <h4 className="font-bold">{testimonial.name}</h4>
-                  <p className="text-xs text-slate-500">{testimonial.role}</p>
+                  <h4 className="font-bold text-[#1F2937] dark:text-white">{testimonial.name}</h4>
+                  <p className="text-xs text-[#6B7280]">{testimonial.role}</p>
                 </div>
               </div>
             </motion.div>

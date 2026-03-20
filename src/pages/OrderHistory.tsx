@@ -52,16 +52,16 @@ export const OrderHistory: React.FC = () => {
           <Receipt size={24} />
         </div>
         <div>
-          <h1 className="text-3xl font-bold font-display text-slate-900 dark:text-white">Order History</h1>
-          <p className="text-slate-500 dark:text-slate-400">View your wallet funding and purchase activity.</p>
+          <h1 className="text-3xl font-bold font-display text-[#1F2937] dark:text-white">Order History</h1>
+          <p className="text-[#6B7280] dark:text-slate-400">View your wallet funding and purchase activity.</p>
         </div>
       </div>
 
       {transactions.length === 0 ? (
         <div className="glass p-12 rounded-3xl text-center flex flex-col items-center">
           <Receipt size={64} className="text-slate-300 dark:text-slate-700 mb-6" />
-          <h3 className="text-xl font-bold text-slate-600 dark:text-slate-300 mb-2">No transaction history</h3>
-          <p className="text-slate-500">Your purchases and top-ups will be listed here.</p>
+          <h3 className="text-xl font-bold text-[#6B7280] dark:text-slate-300 mb-2">No transaction history</h3>
+          <p className="text-[#6B7280]">Your purchases and top-ups will be listed here.</p>
         </div>
       ) : (
         <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl overflow-hidden">
@@ -69,11 +69,11 @@ export const OrderHistory: React.FC = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Transaction</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Details</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Amount</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Date</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-4 text-xs font-bold text-[#6B7280] uppercase tracking-wider">Transaction</th>
+                  <th className="px-6 py-4 text-xs font-bold text-[#6B7280] uppercase tracking-wider">Details</th>
+                  <th className="px-6 py-4 text-xs font-bold text-[#6B7280] uppercase tracking-wider">Amount</th>
+                  <th className="px-6 py-4 text-xs font-bold text-[#6B7280] uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-4 text-xs font-bold text-[#6B7280] uppercase tracking-wider">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -87,24 +87,24 @@ export const OrderHistory: React.FC = () => {
                         )}>
                           {tx.type === 'Funding' ? <PlusCircle size={18} /> : <ArrowUpRight size={18} />}
                         </div>
-                        <span className="font-bold text-sm text-slate-900 dark:text-white">
+                        <span className="font-bold text-sm text-[#1F2937] dark:text-white">
                           {tx.type === 'Funding' ? 'Wallet Top-up' : 'Purchase'}
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">
+                    <td className="px-6 py-4 text-sm text-[#6B7280] dark:text-slate-300">
                       {tx.products?.name ? tx.products.name : '-'}
                     </td>
                     <td className="px-6 py-4">
                       <span className={cn(
                         "font-bold text-sm",
-                        tx.type === 'Funding' ? "text-emerald-500" : "text-slate-900 dark:text-white"
+                        tx.type === 'Funding' ? "text-emerald-500" : "text-[#1F2937] dark:text-white"
                       )}>
                         {tx.type === 'Funding' ? '+' : '-'}${Number(tx.amount).toFixed(2)}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                      <div className="flex items-center gap-1.5 text-xs text-[#6B7280]">
                         <Clock size={12} />
                         {new Date(tx.created_at).toLocaleString()}
                       </div>

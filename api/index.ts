@@ -2,6 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
+import rateLimit from 'express-rate-limit';
+import { z } from 'zod';
+import { authenticate, AuthRequest } from './middleware';
 
 // Load environment variables
 dotenv.config();
@@ -11,6 +14,30 @@ const app = express();
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Rate Limiting
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, 
+  max: 10, 
+  message: { success: false, error: 'Too many requests' }
+});
+
+const purchaseLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, 
+  max: 50, 
+  message: { success: false, error: 'Purchase limit reached' }
+});
+
+// Validation Schemas
+const purchaseSchema = z.object({
+  productId: z.string().min(1),
+  supplierId: z.string().optional()
+});
+
+const fundSchema = z.object({
+  amount: z.number().min(1),
+  email: z.string().email()
+});
 
 // Basic health check route
 app.get('/api/health', (req, res) => {
@@ -72,12 +99,14 @@ app.get('/api/reseller/products', async (req, res) => {
 });
 
 // ─── 2. Purchase account (Supplier API Proxy) ────────────────────────────────
-app.post('/api/reseller/purchase', async (req, res) => {
+app.post('/api/reseller/purchase', purchaseLimiter, authenticate as any, async (req: AuthRequest, res) => {
   try {
-    const { productId, supplierId } = req.body;
+    const validated = purchaseSchema.parse(req.body);
+    const { productId, supplierId } = validated;
+    const userId = req.user?.id;
     
-    if (!productId) {
-      return res.status(400).json({ success: false, error: 'Missing productId' });
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
 
     const apiKey = process.env.SUPPLIER_API_KEY;
@@ -125,9 +154,11 @@ app.post('/api/reseller/purchase', async (req, res) => {
 });
 
 // ─── 3. Wallet Fund — Initialize Korapay Checkout ────────────────────────────
-app.post('/api/wallet/fund', async (req, res) => {
+app.post('/api/wallet/fund', authenticate as any, async (req: AuthRequest, res) => {
   try {
-    const { amount, email, userId } = req.body;
+    const validated = fundSchema.parse(req.body);
+    const { amount, email } = validated;
+    const userId = req.user?.id;
 
     if (!amount || amount < 1) {
       return res.status(400).json({ success: false, error: 'Invalid amount. Minimum is $1.' });
@@ -236,9 +267,10 @@ app.post('/api/wallet/verify', async (req, res) => {
 // ─── 5. OTP Generate ─────────────────────────────────────────────────────────
 const otpStore = new Map<string, { code: string; expires: number }>();
 
-app.post('/api/otp/generate', async (req, res) => {
+app.post('/api/otp/generate', authLimiter, authenticate as any, async (req: AuthRequest, res) => {
   try {
-    const { userId, email } = req.body;
+    const { email } = req.body;
+    const userId = req.user?.id;
     if (!userId || !email) {
       return res.status(400).json({ success: false, error: 'Missing userId or email' });
     }

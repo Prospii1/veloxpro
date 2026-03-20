@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Poppins", ui-sans-serif, system-ui, sans-serif;
@@ -7,43 +9,62 @@
   --color-primary: #4F46E5;
   --color-secondary: #06B6D4;
   --color-accent: #F59E0B;
+  
+  --text-primary: #1F2937;
+  --text-secondary: #6B7280;
 }
 
 @layer base {
+  html {
+    @apply scroll-smooth;
+  }
+
   body {
-    @apply bg-slate-50 text-slate-900 transition-colors duration-300;
+    @apply bg-white text-[#1F2937] transition-colors duration-300;
   }
   
   .dark body {
-    @apply bg-slate-950 text-slate-50;
+    @apply bg-slate-950 text-slate-100;
   }
 }
 
 @layer components {
+  /* ── Light Mode Card/Container ─────────────── */
   .glass {
-    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-xl;
+    @apply bg-white border border-slate-200 shadow-sm;
   }
-  
+
+  /* ── Dark Mode Card/Container ──────────────── */
   .dark .glass {
-    @apply bg-slate-900/70 backdrop-blur-md border border-slate-800/50 shadow-2xl;
+    @apply bg-slate-900 border-slate-800 shadow-xl;
   }
-  
+
+  /* ── Buttons ───────────────────────────────── */
   .btn-primary {
-    @apply px-6 py-3 rounded-full bg-primary text-white font-medium hover:bg-primary/90 transition-all active:scale-95 flex items-center justify-center gap-2;
+    @apply px-6 py-3 rounded-full bg-primary text-white font-semibold hover:bg-primary/90 transition-all active:scale-95 flex items-center justify-center gap-2 shadow-sm;
   }
   
   .btn-secondary {
-    @apply px-6 py-3 rounded-full bg-white text-slate-900 border border-slate-200 font-medium hover:bg-slate-50 transition-all active:scale-95 flex items-center justify-center gap-2;
+    @apply px-6 py-3 rounded-full bg-slate-100 text-[#1F2937] font-semibold hover:bg-slate-200 transition-all active:scale-95 flex items-center justify-center gap-2 border border-slate-200;
   }
   
   .dark .btn-secondary {
     @apply bg-slate-800 text-white border-slate-700 hover:bg-slate-700;
   }
+
+  /* ── Card Utility ──────────────────────────── */
+  .card {
+    @apply bg-white border border-slate-100 shadow-sm rounded-2xl;
+  }
+
+  .dark .card {
+    @apply bg-slate-900 border-slate-800;
+  }
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -51,11 +72,21 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-300 rounded-full;
+  @apply bg-slate-200 rounded-full;
 }
 
 .dark ::-webkit-scrollbar-thumb {
   @apply bg-slate-700;
+}
+
+/* Hide number input arrows */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
 }
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@500;600;700&display=swap');

@@ -51,8 +51,8 @@ export const Login: React.FC<LoginProps> = ({ onSignupClick, onBackToHome }) => 
 
           <div className="relative z-10">
             <div className="text-center mb-10">
-              <h1 className="text-3xl font-bold font-display mb-2">Welcome Back</h1>
-              <p className="text-slate-500 dark:text-slate-400">Enter your credentials to access your account</p>
+              <h1 className="text-3xl font-bold font-display mb-2 text-[#1F2937] dark:text-white">Welcome Back</h1>
+              <p className="text-[#6B7280] dark:text-slate-400">Enter your credentials to access your account</p>
             </div>
 
             {error && (
@@ -63,7 +63,7 @@ export const Login: React.FC<LoginProps> = ({ onSignupClick, onBackToHome }) => 
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">Email Address</label>
+                <label className="text-sm font-bold text-[#1F2937] dark:text-slate-300 ml-1">Email Address</label>
                 <div className="relative group">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
                     <Mail size={20} />
@@ -73,7 +73,7 @@ export const Login: React.FC<LoginProps> = ({ onSignupClick, onBackToHome }) => 
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@example.com"
-                    className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                    className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-[#1F2937] dark:text-white"
                     required
                   />
                 </div>
@@ -81,7 +81,7 @@ export const Login: React.FC<LoginProps> = ({ onSignupClick, onBackToHome }) => 
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between ml-1">
-                  <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Password</label>
+                  <label className="text-sm font-bold text-[#1F2937] dark:text-slate-300">Password</label>
                   <button type="button" className="text-xs font-bold text-primary hover:underline">Forgot password?</button>
                 </div>
                 <div className="relative group">
@@ -93,7 +93,7 @@ export const Login: React.FC<LoginProps> = ({ onSignupClick, onBackToHome }) => 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl py-4 pl-12 pr-12 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                    className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl py-4 pl-12 pr-12 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-[#1F2937] dark:text-white"
                     required
                   />
                   <button 
@@ -117,7 +117,7 @@ export const Login: React.FC<LoginProps> = ({ onSignupClick, onBackToHome }) => 
             </form>
 
             <div className="mt-8 text-center">
-              <p className="text-slate-500 dark:text-slate-400">
+              <p className="text-[#6B7280] dark:text-slate-400">
                 Don't have an account?{' '}
                 <button 
                   onClick={onSignupClick}
@@ -133,7 +133,7 @@ export const Login: React.FC<LoginProps> = ({ onSignupClick, onBackToHome }) => 
         <div className="mt-8 text-center">
           <button 
             onClick={onBackToHome}
-            className="text-sm font-bold text-slate-500 hover:text-primary transition-colors"
+            className="text-sm font-bold text-[#6B7280] hover:text-primary transition-colors"
           >
             ← Back to Home
           </button>
