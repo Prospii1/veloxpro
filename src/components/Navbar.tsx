@@ -95,7 +95,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     fetchCats();
     
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [user]);
 
   const navItems = [
     { label: 'All Products', action: onAllProductsClick },
