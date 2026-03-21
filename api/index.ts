@@ -10,8 +10,8 @@ import { authenticate, AuthRequest } from './middleware';
 // Load environment variables
 dotenv.config();
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://placeholder.supabase.co';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || 'placeholder';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const app = express();
@@ -55,6 +55,10 @@ app.get('/api/health', (req, res) => {
 // ─── 1. Fetch products/accounts (Serve from DB) ─────────────────────
 app.get('/api/reseller/products', async (req, res) => {
   try {
+    if (supabaseUrl === 'https://placeholder.supabase.co') {
+      throw new Error('MISSING_ENV_VARS: Supabase URL/Key environment variables are not set in Vercel.');
+    }
+
     const { data: products, error } = await supabase
       .from('products')
       .select('*')
@@ -89,7 +93,8 @@ app.get('/api/reseller/products', async (req, res) => {
     });
   } catch (error: any) {
     console.error('API Error:', error.message);
-    res.status(500).json({ success: false, error: 'Failed to fetch products' });
+    const authError = error.message?.includes('MISSING') ? error.message : 'Failed to fetch products';
+    res.status(500).json({ success: false, error: authError });
   }
 });
 
