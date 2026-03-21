@@ -64,11 +64,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (error) throw error;
+      const profileData = data as any;
       setProfile({
-        ...data,
-        total_deposit: data.total_deposit || 0,
-        total_used: data.total_used || 0,
-        otp_enabled: data.otp_enabled || false,
+        ...profileData,
+        total_deposit: profileData?.total_deposit || 0,
+        total_used: profileData?.total_used || 0,
+        otp_enabled: profileData?.otp_enabled || false,
       } as UserProfile);
     } catch (error) {
       console.error('Error fetching profile via RPC:', error);
