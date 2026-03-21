@@ -28,6 +28,17 @@ export const Signup: React.FC<SignupProps> = ({ onLoginClick, onBackToHome }) =>
     setError(null);
 
     try {
+      // 1. Check if username already exists
+      const { data: existingUser } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', username)
+        .maybeSingle();
+
+      if (existingUser) {
+        throw new Error("Username is already taken. Please choose another one.");
+      }
+
       const { error } = await supabase.auth.signUp({
         email,
         password,

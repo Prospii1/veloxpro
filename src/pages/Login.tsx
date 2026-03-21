@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, User } from 'lucide-react';
 import { motion } from 'motion/react';
 import { supabase } from '../lib/supabase';
 
@@ -10,7 +10,7 @@ interface LoginProps {
 
 export const Login: React.FC<LoginProps> = ({ onSignupClick, onBackToHome }) => {
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,15 +21,31 @@ export const Login: React.FC<LoginProps> = ({ onSignupClick, onBackToHome }) => 
     setError(null);
 
     try {
+      let loginEmail = identifier;
+
+      // If it's not an email, try lookup by username
+      if (!identifier.includes('@')) {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('username', identifier)
+          .single();
+        
+        if (profileError || !profile) {
+          throw new Error('Username not found. Please check and try again.');
+        }
+        if (!profile.email) throw new Error('No email associated with this username.');
+        loginEmail = profile.email;
+      }
+
       const { error } = await supabase.auth.signInWithPassword({
-        email,
+        email: loginEmail,
         password,
       });
 
       if (error) throw error;
       
-      // On success, state reflects in AuthContext.
-      onBackToHome(); // Or redirect to dashboard!
+      onBackToHome();
     } catch (err: any) {
       setError(err.message || 'Failed to login');
     } finally {
@@ -63,16 +79,16 @@ export const Login: React.FC<LoginProps> = ({ onSignupClick, onBackToHome }) => 
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <label className="text-sm font-bold text-[#1F2937] dark:text-slate-300 ml-1">Email Address</label>
+                <label className="text-sm font-bold text-[#1F2937] dark:text-slate-300 ml-1">Username or Email</label>
                 <div className="relative group">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
-                    <Mail size={20} />
+                    {identifier.includes('@') ? <Mail size={20} /> : <User size={20} />}
                   </div>
                   <input 
-                    type="email" 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@example.com"
+                    type="text" 
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    placeholder="username or email"
                     className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-[#1F2937] dark:text-white"
                     required
                   />

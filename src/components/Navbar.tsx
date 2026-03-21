@@ -258,6 +258,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                   {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
                 </button>
                 <button 
+                  onClick={onNumberVerificationClick}
+                  className="text-sm font-bold px-4 py-2 text-[#1F2937] dark:text-slate-300 hover:text-primary transition-colors hidden lg:block"
+                >
+                  Number Verification
+                </button>
+                <button 
                   onClick={onLoginClick}
                   className="text-sm font-bold px-4 py-2 text-[#1F2937] dark:text-slate-300 hover:text-primary transition-colors"
                 >
