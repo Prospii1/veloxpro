@@ -364,25 +364,20 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <ChevronDown size={18} className={cn("transition-transform duration-300", isProductsExpanded && "rotate-180")} />
               </button>
 
-              <AnimatePresence>
-                {isProductsExpanded && (
-                  <motion.div 
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden bg-slate-50/50 dark:bg-white/5 mx-2 rounded-xl"
-                  >
-                    <div className="py-2 px-2 flex flex-col gap-1">
-                      <button 
-                        onClick={() => { onAllProductsClick(); setIsMobileMenuOpen(false); }}
-                        className="w-full text-left px-4 py-2 rounded-lg text-sm font-bold text-primary hover:bg-primary/10"
-                      >
-                        View All Catalog
-                      </button>
-                      
-                      <div className="h-px bg-slate-100 dark:bg-white/5 my-1" />
-                      
-                      {categories.map((cat, i) => (
+              {isProductsExpanded && (
+                <div className="bg-slate-50/50 dark:bg-white/5 mx-2 rounded-xl border border-slate-100 dark:border-slate-800/50">
+                  <div className="py-2 px-2 flex flex-col gap-1">
+                    <button 
+                      onClick={() => { onAllProductsClick(); setIsMobileMenuOpen(false); }}
+                      className="w-full text-left px-4 py-2 rounded-lg text-sm font-bold text-primary hover:bg-primary/10 transition-colors"
+                    >
+                      View All Catalog
+                    </button>
+                    
+                    <div className="h-px bg-slate-100 dark:bg-slate-800/50 my-1" />
+                    
+                    {categories.length > 0 ? (
+                      categories.map((cat, i) => (
                         <button 
                           key={i}
                           onClick={() => { onCategoryClick(cat.name); setIsMobileMenuOpen(false); }}
@@ -393,11 +388,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                           )}
                           {cat.name}
                         </button>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                      ))
+                    ) : (
+                      <div className="px-4 py-3 text-xs text-slate-400 italic">
+                        Loading categories...
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <button 
                 onClick={() => { onNumberVerificationClick(); setIsMobileMenuOpen(false); }}
