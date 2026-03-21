@@ -5,6 +5,7 @@ import { cn } from '../utils';
 import { useAuth } from '../contexts/AuthContext';
 import { useCurrency } from '../contexts/CurrencyContext';
 import { normalizeCategory } from '../utils/category';
+import { fetchResellerProducts } from '../services/api';
 
 interface NavbarProps {
   cartCount: number;
@@ -64,7 +65,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     // Fetch live categories for the mobile drawer
     const fetchCats = async () => {
       try {
-        const fetchResellerProducts = (await import('../services/api')).fetchResellerProducts;
         const resp = await fetchResellerProducts();
         if (resp && resp.categories) {
           const seen = new Set<string>();
