@@ -24,7 +24,6 @@ interface NavbarProps {
   onCategoryClick: (category: string) => void;
   isDarkMode: boolean;
   toggleDarkMode: () => void;
-  showSecondaryNav?: boolean;
   onTermsClick?: () => void;
   onApiDocsClick?: () => void;
 }
@@ -46,7 +45,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   onCategoryClick,
   isDarkMode,
   toggleDarkMode,
-  showSecondaryNav = true,
   onTermsClick,
   onApiDocsClick
 }) => {
@@ -96,11 +94,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     
     return () => window.removeEventListener('scroll', handleScroll);
   }, [user]);
-
-  const navItems = [
-    { label: 'All Products', action: onAllProductsClick },
-    ...categories.map(cat => ({ label: cat.name, action: onAllProductsClick }))
-  ];
 
   return (
     <>
@@ -292,25 +285,6 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Secondary Navigation (Horizontal Scroll on Mobile) */}
-      {showSecondaryNav && (
-        <div className="max-w-7xl mx-auto px-4 md:px-6 h-12 flex items-center overflow-x-auto no-scrollbar border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/50">
-          <div className="flex items-center gap-6 md:gap-8 whitespace-nowrap">
-            {navItems.map((item, i) => (
-              <button
-                key={i}
-                onClick={item.action}
-                className={cn(
-                  "text-xs md:text-sm font-bold transition-colors",
-                  "text-[#6B7280] hover:text-[#1F2937] dark:hover:text-white"
-                )}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
     </nav>
 
     {/* Mobile Side Drawer */}

@@ -122,7 +122,6 @@ export default function App() {
         onApiDocsClick={() => setCurrentView('api-docs')}
         isDarkMode={isDarkMode}
         toggleDarkMode={() => setIsDarkMode(prev => !prev)}
-        showSecondaryNav={currentView === 'home' && !user}
       />
 
       <AnimatePresence mode="wait">
