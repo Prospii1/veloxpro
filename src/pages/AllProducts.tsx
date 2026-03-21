@@ -6,6 +6,7 @@ import { Service } from '../types';
 import { Search, Loader2 } from 'lucide-react';
 import { cn } from '../utils';
 import { normalizeCategory } from '../utils/category';
+import { supabase } from '../lib/supabase';
 
 interface AllProductsProps {
   onAddToCart: (service: Service) => void;
@@ -70,6 +71,16 @@ export const AllProducts: React.FC<AllProductsProps> = ({ onAddToCart, initialCa
       }
     };
     loadProducts();
+
+    const channel = supabase.channel('products-updates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
+        loadProducts();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const filteredServices = services.filter(service => {

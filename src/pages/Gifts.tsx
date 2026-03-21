@@ -25,6 +25,16 @@ export const GiftsPage: React.FC = () => {
 
   useEffect(() => {
     fetchGifts();
+    
+    const channel = supabase.channel('gifts-updates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'gifts' }, () => {
+        fetchGifts();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchGifts = async () => {

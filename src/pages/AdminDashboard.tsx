@@ -21,7 +21,8 @@ import {
   CheckCircle2,
   XCircle,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  Edit2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../contexts/AuthContext';
@@ -106,9 +107,30 @@ export const AdminDashboard: React.FC = () => {
     if (activeTab === 'products') fetchProducts();
     if (activeTab === 'gifts') fetchGifts();
     if (activeTab === 'users') fetchUsers();
-    if (activeTab === 'orders') fetchOrders();
+    if (activeTab === 'orders' || activeTab === 'overview') fetchOrders();
     if (activeTab === 'suppliers') getSuppliers();
     if (activeTab === 'settings') fetchSettings();
+
+    const channel = supabase.channel('admin-updates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
+        if (activeTab === 'products') fetchProducts();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'gifts' }, () => {
+        if (activeTab === 'gifts') fetchGifts();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+        if (activeTab === 'orders' || activeTab === 'overview') fetchOrders();
+        fetchStats();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+        if (activeTab === 'users') fetchUsers();
+        fetchStats();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [activeTab]);
 
   const getSuppliers = async () => {
@@ -170,10 +192,23 @@ export const AdminDashboard: React.FC = () => {
     setLoading(false);
   };
 
+  const [userStats, setUserStats] = useState<Record<string, { deposited: number, used: number }>>({});
+
   const fetchUsers = async () => {
     setLoading(true);
-    const { data } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
-    if (data) setUsers(data);
+    const { data: usersData } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
+    const { data: ordersData } = await supabase.from('orders').select('user_id, amount').eq('status', 'completed');
+    
+    if (usersData) {
+      const stats: Record<string, { used: number, deposited: number }> = {};
+      usersData.forEach((u: any) => {
+        const used = ordersData?.filter((o: any) => o.user_id === u.id).reduce((sum: number, o: any) => sum + (o.amount || 0), 0) || 0;
+        const deposited = (u.wallet_balance || 0) + used;
+        stats[u.id] = { used, deposited };
+      });
+      setUserStats(stats);
+      setUsers(usersData);
+    }
     setLoading(false);
   };
 
@@ -235,12 +270,20 @@ export const AdminDashboard: React.FC = () => {
 
   const handleCreateSupplier = async () => {
     try {
-      await createSupplier(newSupplier);
+      if (!newSupplier.name || !newSupplier.base_url || !newSupplier.api_key) {
+        alert("Name, Base URL, and API Key are required.");
+        return;
+      }
+      if (newSupplier.id) {
+        await updateSupplier(newSupplier.id, newSupplier);
+      } else {
+        await createSupplier(newSupplier as Omit<Supplier, 'id' | 'created_at' | 'updated_at'>);
+      }
       setShowSupplierModal(false);
       setNewSupplier({ name: '', base_url: '', api_key: '', type: 'products', status: 'active', documentation: '' });
       getSuppliers();
-    } catch (e) {
-      alert("Failed to create supplier");
+    } catch (e: any) {
+      alert(e.message || "Failed to save supplier");
     }
   };
 
@@ -327,7 +370,10 @@ export const AdminDashboard: React.FC = () => {
               onClick={() => {
                 if (activeTab === 'products') setShowProductModal(true);
                 if (activeTab === 'gifts') setShowGiftModal(true);
-                if (activeTab === 'suppliers') setShowSupplierModal(true);
+                if (activeTab === 'suppliers') {
+                  setNewSupplier({ name: '', base_url: '', api_key: '', type: 'products', status: 'active', documentation: '' });
+                  setShowSupplierModal(true);
+                }
                 if (activeTab === 'overview' || activeTab === 'users' || activeTab === 'orders') alert('Use specific tabs to create items');
               }}
               className="btn-primary flex items-center gap-2 px-6"
@@ -389,22 +435,29 @@ export const AdminDashboard: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                        {[1, 2, 3, 4, 5].map((_, i) => (
+                        {orders.slice(0, 5).map((o, i) => (
                           <tr key={i} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
-                            <td className="px-8 py-6 font-mono text-sm text-[#6B7280] dark:text-slate-400">#ORD-523{i}</td>
+                            <td className="px-8 py-6 font-mono text-sm text-[#6B7280] dark:text-slate-400">#{o.id.split('-')[0]}</td>
                             <td className="px-8 py-6">
                               <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">JD</div>
-                                 <span className="font-bold text-[#1F2937] dark:text-white">John Doe</span>
+                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
+                                  {users.find(u => u.id === o.user_id)?.email?.[0]?.toUpperCase() || 'U'}
+                                </div>
+                                <span className="font-bold text-[#1F2937] dark:text-white">
+                                  {users.find(u => u.id === o.user_id)?.email || 'Unknown User'}
+                                </span>
                               </div>
                             </td>
                             <td className="px-8 py-6">
-                              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-xs font-bold">
-                                Completed
+                              <span className={cn(
+                                "inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold",
+                                o.status === 'completed' ? "bg-emerald-500/10 text-emerald-500" : "bg-orange-500/10 text-orange-500"
+                              )}>
+                                {o.status}
                               </span>
                             </td>
-                             <td className="px-8 py-6 font-bold text-[#1F2937] dark:text-white">$124.99</td>
-                            <td className="px-8 py-6 text-slate-500 text-sm">Oct 24, 2023</td>
+                             <td className="px-8 py-6 font-bold text-[#1F2937] dark:text-white">${o.amount?.toFixed(2)}</td>
+                            <td className="px-8 py-6 text-slate-500 text-sm">{new Date(o.created_at).toLocaleDateString()}</td>
                             <td className="px-8 py-6 text-right">
                               <button className="p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg transition-colors">
                                 <MoreVertical size={16} />
@@ -412,6 +465,13 @@ export const AdminDashboard: React.FC = () => {
                             </td>
                           </tr>
                         ))}
+                        {orders.length === 0 && !loading && (
+                          <tr>
+                            <td colSpan={6} className="px-8 py-12 text-center text-slate-400">
+                              No recent orders found.
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -482,9 +542,12 @@ export const AdminDashboard: React.FC = () => {
                     <thead>
                       <tr className="bg-slate-50 dark:bg-white/5">
                         <th className="px-8 py-4 text-xs font-bold text-[#6B7280] uppercase">Order ID</th>
+                        <th className="px-8 py-4 text-xs font-bold text-[#6B7280] uppercase">User</th>
                         <th className="px-8 py-4 text-xs font-bold text-[#6B7280] uppercase">Product</th>
                         <th className="px-8 py-4 text-xs font-bold text-[#6B7280] uppercase">Amount</th>
                         <th className="px-8 py-4 text-xs font-bold text-[#6B7280] uppercase">Status</th>
+                        <th className="px-8 py-4 text-xs font-bold text-[#6B7280] uppercase">Payment</th>
+                        <th className="px-8 py-4 text-xs font-bold text-[#6B7280] uppercase">Supplier</th>
                         <th className="px-8 py-4 text-xs font-bold text-[#6B7280] uppercase">Date</th>
                       </tr>
                     </thead>
@@ -492,6 +555,9 @@ export const AdminDashboard: React.FC = () => {
                       {orders.map((o) => (
                         <tr key={o.id} className="hover:bg-slate-50 dark:hover:bg-white/5">
                           <td className="px-8 py-6 font-mono text-xs">{o.id.split('-')[0]}...</td>
+                          <td className="px-8 py-6 font-bold text-[#1F2937] dark:text-white">
+                            {users.find(u => u.id === o.user_id)?.email || 'Unknown'}
+                          </td>
                           <td className="px-8 py-6 font-bold text-[#1F2937] dark:text-white">{o.product_name}</td>
                           <td className="px-8 py-6 font-bold text-[#1F2937] dark:text-white">${o.amount?.toFixed(2)}</td>
                           <td className="px-8 py-6">
@@ -501,6 +567,10 @@ export const AdminDashboard: React.FC = () => {
                             )}>
                               {o.status}
                             </span>
+                          </td>
+                          <td className="px-8 py-6 text-slate-500">Wallet</td>
+                          <td className="px-8 py-6 text-slate-500">
+                            {o.product_type === 'supplier_product' ? 'API Supplier' : 'Local Gift'}
                           </td>
                           <td className="px-8 py-6 text-slate-500 text-sm">
                             {new Date(o.created_at).toLocaleDateString()}
@@ -522,9 +592,12 @@ export const AdminDashboard: React.FC = () => {
                   <table className="w-full text-left">
                     <thead>
                       <tr className="bg-slate-50/50 dark:bg-white/5">
-                        <th className="px-8 py-4 text-xs font-bold text-slate-500 uppercase">User</th>
+                        <th className="px-8 py-4 text-xs font-bold text-slate-500 uppercase">Username</th>
+                        <th className="px-8 py-4 text-xs font-bold text-slate-500 uppercase">Email</th>
                         <th className="px-8 py-4 text-xs font-bold text-slate-500 uppercase">Wallet</th>
-                        <th className="px-8 py-4 text-xs font-bold text-slate-500 uppercase">Role</th>
+                        <th className="px-8 py-4 text-xs font-bold text-slate-500 uppercase">Total Deposit</th>
+                        <th className="px-8 py-4 text-xs font-bold text-slate-500 uppercase">Total Used</th>
+                        <th className="px-8 py-4 text-xs font-bold text-slate-500 uppercase">Status</th>
                         <th className="px-8 py-4 text-xs font-bold text-slate-500 uppercase">Joined</th>
                         <th className="px-8 py-4"></th>
                       </tr>
@@ -532,9 +605,19 @@ export const AdminDashboard: React.FC = () => {
                     <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                       {users.map((u) => (
                         <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-white/5">
-                          <td className="px-8 py-6 font-bold text-[#1F2937] dark:text-white">{u.email}</td>
+                          <td className="px-8 py-6 font-bold text-[#1F2937] dark:text-white">{u.email?.split('@')[0] || 'User'}</td>
+                          <td className="px-8 py-6 text-slate-500 text-sm">{u.email}</td>
                           <td className="px-8 py-6 font-bold text-primary">${u.wallet_balance?.toFixed(2)}</td>
-                          <td className="px-8 py-6 text-slate-500">{u.role}</td>
+                          <td className="px-8 py-6 font-bold text-emerald-500">${userStats[u.id]?.deposited.toFixed(2)}</td>
+                          <td className="px-8 py-6 font-bold text-orange-500">${userStats[u.id]?.used.toFixed(2)}</td>
+                          <td className="px-8 py-6">
+                            <span className={cn(
+                              "px-3 py-1 rounded-full text-xs font-bold",
+                              u.status === 'suspended' ? "bg-red-500/10 text-red-500" : "bg-emerald-500/10 text-emerald-500"
+                            )}>
+                              {u.status === 'suspended' ? 'Suspended' : 'Active'}
+                            </span>
+                          </td>
                           <td className="px-8 py-6 text-slate-500 text-sm">
                             {new Date(u.created_at).toLocaleDateString()}
                           </td>
@@ -612,6 +695,16 @@ export const AdminDashboard: React.FC = () => {
                           </td>
                           <td className="px-8 py-6 text-right">
                             <div className="flex items-center justify-end gap-3">
+                               <button 
+                                onClick={() => {
+                                  setNewSupplier(s);
+                                  setShowSupplierModal(true);
+                                }}
+                                className="p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg transition-colors text-blue-500"
+                                title="Edit Supplier"
+                              >
+                                <Edit2 size={16} />
+                              </button>
                               <button 
                                 onClick={() => handleTestConnection(s.id)}
                                 disabled={testingId === s.id}
@@ -815,10 +908,11 @@ export const AdminDashboard: React.FC = () => {
             </motion.div>
           </div>
         )}
+
         {showSupplierModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white dark:bg-slate-900 rounded-[2rem] max-w-lg w-full p-8 shadow-2xl border border-white/10">
-              <h2 className="text-2xl font-bold mb-6 text-[#1F2937] dark:text-white">Add New Supplier</h2>
+              <h2 className="text-2xl font-bold mb-6 text-[#1F2937] dark:text-white">{newSupplier.id ? 'Edit Supplier' : 'Add New Supplier'}</h2>
               <div className="space-y-4 mb-6">
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-500 uppercase">Supplier Name</label>
@@ -861,8 +955,8 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               </div>
               <div className="flex gap-4">
-                <button onClick={() => setShowSupplierModal(false)} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 rounded-2xl font-bold">Cancel</button>
-                <button onClick={handleCreateSupplier} className="flex-1 py-4 bg-primary text-white rounded-2xl font-bold shadow-lg shadow-primary/20">Add Supplier</button>
+                <button onClick={() => { setShowSupplierModal(false); setNewSupplier({ name: '', base_url: '', api_key: '', type: 'products', status: 'active', documentation: '' }); }} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 rounded-2xl font-bold">Cancel</button>
+                <button onClick={handleCreateSupplier} className="flex-1 py-4 bg-primary text-white rounded-2xl font-bold shadow-lg shadow-primary/20">{newSupplier.id ? 'Save Changes' : 'Add Supplier'}</button>
               </div>
             </motion.div>
           </div>
@@ -871,3 +965,5 @@ export const AdminDashboard: React.FC = () => {
     </div>
   );
 };
+
+export default AdminDashboard;
