@@ -117,6 +117,7 @@ export default function App() {
         onNumberVerificationClick={() => setCurrentView('number-verification')}
         onGiftsClick={() => setCurrentView('gifts')}
         onAdminClick={() => setCurrentView('admin')}
+        onCategoryClick={(category) => { setSelectedCategory(category); setCurrentView('all-products'); }}
         onTermsClick={() => setCurrentView('terms-of-service')}
         onApiDocsClick={() => setCurrentView('api-docs')}
         isDarkMode={isDarkMode}

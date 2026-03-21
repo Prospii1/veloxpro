@@ -22,7 +22,8 @@ import {
   XCircle,
   ToggleLeft,
   ToggleRight,
-  Edit2
+  Edit2,
+  FolderOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../contexts/AuthContext';
@@ -34,10 +35,13 @@ import {
   updateSupplier, 
   deleteSupplier, 
   testSupplierConnection,
-  Supplier
+  Supplier,
+  createCategory,
+  updateCategory,
+  deleteCategory
 } from '../services/api';
 
-type AdminTab = 'overview' | 'products' | 'gifts' | 'users' | 'orders' | 'suppliers' | 'settings';
+type AdminTab = 'overview' | 'categories' | 'products' | 'gifts' | 'users' | 'orders' | 'suppliers' | 'settings';
 
 export const AdminDashboard: React.FC = () => {
   const { profile } = useAuth();
@@ -69,6 +73,7 @@ export const AdminDashboard: React.FC = () => {
 
   const sidebarItems = [
     { id: 'overview', icon: LayoutDashboard, label: 'Overview' },
+    { id: 'categories', icon: FolderOpen, label: 'Categories' },
     { id: 'products', icon: Package, label: 'Products' },
     { id: 'gifts', icon: Gift, label: 'Order a Gift' },
     { id: 'orders', icon: ShoppingCart, label: 'Orders' },
@@ -88,11 +93,14 @@ export const AdminDashboard: React.FC = () => {
   const [gifts, setGifts] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState<any>(null);
   const [showProductModal, setShowProductModal] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showGiftModal, setShowGiftModal] = useState(false);
-  const [newProduct, setNewProduct] = useState({ name: '', type: '', base_price: 0, markup: 0, stock_quantity: 0, description: '', icon_url: '', availability: true });
+  const [newProduct, setNewProduct] = useState({ id: '', name: '', type: '', base_price: 0, markup: 0, stock_quantity: 0, description: '', icon_url: '', image_url: '', category_id: '', availability: true });
+  const [newCategory, setNewCategory] = useState({ id: '', name: '', logo_image_url: '' });
   const [newGift, setNewGift] = useState({ name: '', description: '', price: 0, image_url: '', availability_status: 'active' });
   
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -104,7 +112,8 @@ export const AdminDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchStats();
-    if (activeTab === 'products') fetchProducts();
+    if (activeTab === 'categories') fetchCategories();
+    if (activeTab === 'products') { fetchProducts(); fetchCategories(); }
     if (activeTab === 'gifts') fetchGifts();
     if (activeTab === 'users') fetchUsers();
     if (activeTab === 'orders' || activeTab === 'overview') fetchOrders();
@@ -112,6 +121,10 @@ export const AdminDashboard: React.FC = () => {
     if (activeTab === 'settings') fetchSettings();
 
     const channel = supabase.channel('admin-updates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, () => {
+        if (activeTab === 'categories') fetchCategories();
+        if (activeTab === 'products') fetchCategories();
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
         if (activeTab === 'products') fetchProducts();
       })
@@ -192,6 +205,13 @@ export const AdminDashboard: React.FC = () => {
     setLoading(false);
   };
 
+  const fetchCategories = async () => {
+    setLoading(true);
+    const { data } = await supabase.from('categories').select('*').order('name', { ascending: true });
+    if (data) setCategories(data);
+    setLoading(false);
+  };
+
   const [userStats, setUserStats] = useState<Record<string, { deposited: number, used: number }>>({});
 
   const fetchUsers = async () => {
@@ -226,13 +246,30 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const handleCreateProduct = async () => {
-    const { error } = await supabase.from('products').insert([{
+    const productData = {
       ...newProduct,
-      price: Number(newProduct.base_price) + Number(newProduct.markup)
-    }]);
-    if (!error) {
-      setShowProductModal(false);
-      fetchProducts();
+      price: Number(newProduct.base_price) + Number(newProduct.markup),
+      created_by: 'admin'
+    };
+    
+    // Remove id if it's empty string (for new products)
+    if (!productData.id) {
+      const { id, ...rest } = productData;
+      const { error } = await supabase.from('products').insert([rest]);
+      if (!error) {
+        setShowProductModal(false);
+        fetchProducts();
+      } else {
+        alert("Error creating product: " + error.message);
+      }
+    } else {
+      const { error } = await supabase.from('products').update(productData).eq('id', productData.id);
+      if (!error) {
+        setShowProductModal(false);
+        fetchProducts();
+      } else {
+        alert("Error updating product: " + error.message);
+      }
     }
   };
 
@@ -253,6 +290,67 @@ export const AdminDashboard: React.FC = () => {
   const handleToggleProductStatus = async (id: string, currentStatus: boolean | null) => {
     const { error } = await supabase.from('products').update({ availability: !currentStatus }).eq('id', id);
     if (!error) fetchProducts();
+  };
+
+  const handleDeleteProduct = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this product?")) return;
+    const { error } = await supabase.from('products').delete().eq('id', id);
+    if (!error) fetchProducts();
+  };
+
+  const handleSaveCategory = async () => {
+    if (!newCategory.name) {
+      alert("Category name is required");
+      return;
+    }
+
+    if (newCategory.id) {
+      const { error } = await supabase.from('categories').update({
+        name: newCategory.name,
+        logo_image_url: newCategory.logo_image_url
+      }).eq('id', newCategory.id);
+      
+      if (!error) {
+        setShowCategoryModal(false);
+        fetchCategories();
+      } else {
+        alert("Error updating category: " + error.message);
+      }
+    } else {
+      const { id, ...rest } = newCategory;
+      const { error } = await supabase.from('categories').insert([rest]);
+      
+      if (!error) {
+        setShowCategoryModal(false);
+        fetchCategories();
+      } else {
+        alert("Error creating category: " + error.message);
+      }
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    // Check if products exist in this category
+    const { count, error: countError } = await supabase
+      .from('products')
+      .select('*', { count: 'exact', head: true })
+      .eq('category_id', id);
+
+    if (countError) {
+      console.error("Error checking products in category:", countError);
+    }
+
+    if (count && count > 0) {
+      if (!window.confirm(`This category has ${count} products. Are you sure you want to delete it? All products in this category will lose their category association.`)) {
+        return;
+      }
+    } else {
+      if (!window.confirm("Are you sure you want to delete this category?")) return;
+    }
+
+    const { error } = await supabase.from('categories').delete().eq('id', id);
+    if (!error) fetchCategories();
+    else alert("Error deleting category: " + error.message);
   };
 
   const handleUpdateSettings = async () => {
@@ -368,7 +466,14 @@ export const AdminDashboard: React.FC = () => {
             </div>
             <button 
               onClick={() => {
-                if (activeTab === 'products') setShowProductModal(true);
+                if (activeTab === 'categories') {
+                  setNewCategory({ id: '', name: '', logo_image_url: '' });
+                  setShowCategoryModal(true);
+                }
+                if (activeTab === 'products') {
+                  setNewProduct({ id: '', name: '', type: '', base_price: 0, markup: 0, stock_quantity: 0, description: '', icon_url: '', image_url: '', category_id: '', availability: true });
+                  setShowProductModal(true);
+                }
                 if (activeTab === 'gifts') setShowGiftModal(true);
                 if (activeTab === 'suppliers') {
                   setNewSupplier({ name: '', base_url: '', api_key: '', type: 'products', status: 'active', documentation: '' });
@@ -479,6 +584,60 @@ export const AdminDashboard: React.FC = () => {
               </motion.div>
             )}
 
+            {activeTab === 'categories' && (
+              <motion.div key="categories" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white dark:bg-slate-900 overflow-hidden rounded-[2.5rem] border border-slate-100 dark:border-white/5 shadow-sm">
+                <div className="p-8 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+                  <h3 className="text-xl font-bold font-display text-[#1F2937] dark:text-white">Categories</h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="bg-slate-50 dark:bg-white/5">
+                        <th className="px-8 py-4 text-xs font-bold text-[#6B7280] uppercase">Icon</th>
+                        <th className="px-8 py-4 text-xs font-bold text-[#6B7280] uppercase">Name</th>
+                        <th className="px-8 py-4 text-xs font-bold text-[#6B7280] uppercase">Created At</th>
+                        <th className="px-8 py-4 text-xs font-bold text-[#6B7280] uppercase text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                      {categories.map((c) => (
+                        <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-white/5">
+                          <td className="px-8 py-4">
+                            {c.logo_image_url ? (
+                              <img src={c.logo_image_url} alt={c.name} className="w-10 h-10 rounded-xl object-cover" />
+                            ) : (
+                              <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+                                <FolderOpen size={20} />
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-8 py-6 font-bold text-[#1F2937] dark:text-white">{c.name}</td>
+                          <td className="px-8 py-6 text-[#6B7280] text-sm">{new Date(c.created_at).toLocaleDateString()}</td>
+                          <td className="px-8 py-6 text-right space-x-2">
+                             <button 
+                               onClick={() => {
+                                 setNewCategory({ id: c.id, name: c.name, logo_image_url: c.logo_image_url || '' });
+                                 setShowCategoryModal(true);
+                               }}
+                               className="p-2 hover:bg-primary/10 text-primary rounded-lg transition-colors"
+                             >
+                               <Edit2 size={16} />
+                             </button>
+                             <button 
+                               onClick={() => handleDeleteCategory(c.id)}
+                               className="p-2 hover:bg-red-100 text-red-500 rounded-lg transition-colors"
+                             >
+                               <Trash2 size={16} />
+                             </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </motion.div>
+            )}
+
             {activeTab === 'products' && (
               <motion.div key="products" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white dark:bg-slate-900 overflow-hidden rounded-[2.5rem] border border-slate-100 dark:border-white/5 shadow-sm">
                 <div className="p-8 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
@@ -501,7 +660,7 @@ export const AdminDashboard: React.FC = () => {
                       {products.map((p) => (
                         <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-white/5">
                           <td className="px-8 py-6 font-bold text-[#1F2937] dark:text-white">{p.name}</td>
-                          <td className="px-8 py-6 text-[#6B7280]">{p.type}</td>
+                          <td className="px-8 py-6 text-[#6B7280]">{categories.find(c => c.id === p.category_id)?.name || p.type}</td>
                           <td className="px-8 py-6 text-[#6B7280]">${p.base_price?.toFixed(2)}</td>
                           <td className="px-8 py-6 font-bold text-[#1F2937] dark:text-white">${p.price?.toFixed(2)}</td>
                           <td className="px-8 py-6 text-[#6B7280]">{p.stock_quantity ?? 'N/A'}</td>
@@ -513,16 +672,45 @@ export const AdminDashboard: React.FC = () => {
                               {p.availability ? 'Active' : 'Inactive'}
                             </span>
                           </td>
-                          <td className="px-8 py-6 text-right">
-                             <button 
-                               onClick={() => handleToggleProductStatus(p.id, p.availability)}
-                               className={cn(
-                                 "text-xs font-bold transition-colors",
-                                 p.availability ? "text-orange-500 hover:text-orange-600" : "text-emerald-500 hover:text-emerald-600"
-                               )}
-                             >
-                               {p.availability ? 'Disable' : 'Enable'}
-                             </button>
+                          <td className="px-8 py-6">
+                             <div className="flex items-center justify-end gap-2">
+                               <button 
+                                 onClick={() => {
+                                   setNewProduct({
+                                     id: p.id,
+                                     name: p.name,
+                                     type: p.type,
+                                     base_price: p.base_price,
+                                     markup: p.price - p.base_price,
+                                     stock_quantity: p.stock_quantity || 0,
+                                     description: p.description || '',
+                                     icon_url: p.icon_url || '',
+                                     image_url: p.image_url || '',
+                                     category_id: p.category_id || '',
+                                     availability: p.availability
+                                   });
+                                   setShowProductModal(true);
+                                 }}
+                                 className="p-2 hover:bg-primary/10 text-primary rounded-lg transition-colors"
+                               >
+                                 <Edit2 size={16} />
+                               </button>
+                               <button 
+                                 onClick={() => handleToggleProductStatus(p.id, p.availability)}
+                                 className={cn(
+                                   "text-xs font-bold px-3 py-1.5 rounded-lg transition-all",
+                                   p.availability ? "bg-orange-500/10 text-orange-500 hover:bg-orange-500/20" : "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
+                                 )}
+                               >
+                                 {p.availability ? 'Disable' : 'Enable'}
+                               </button>
+                               <button 
+                                 onClick={() => handleDeleteProduct(p.id)}
+                                 className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors"
+                               >
+                                 <Trash2 size={16} />
+                               </button>
+                             </div>
                           </td>
                         </tr>
                       ))}
@@ -850,17 +1038,37 @@ export const AdminDashboard: React.FC = () => {
       {/* Creation Modals */}
       <AnimatePresence>
         {showProductModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white dark:bg-slate-900 rounded-[2rem] max-w-lg w-full p-8 shadow-2xl border border-white/10">
-              <h2 className="text-2xl font-bold mb-6 text-[#1F2937] dark:text-white">Create New Product</h2>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm overflow-y-auto">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white dark:bg-slate-900 rounded-[2rem] max-w-lg w-full p-8 shadow-2xl border border-white/10 my-8">
+              <h2 className="text-2xl font-bold mb-6 text-[#1F2937] dark:text-white">{newProduct.id ? 'Edit Product' : 'Create New Product'}</h2>
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="col-span-2 space-y-2">
                   <label className="text-xs font-bold text-slate-500 uppercase">Product Name</label>
                   <input type="text" value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 outline-none" placeholder="e.g. Netflix Premium" />
                 </div>
-                <div className="space-y-2">
+                <div className="col-span-2 space-y-2">
                   <label className="text-xs font-bold text-slate-500 uppercase">Category</label>
-                  <input type="text" value={newProduct.type} onChange={e => setNewProduct({...newProduct, type: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 outline-none" placeholder="e.g. Streaming" />
+                  <select 
+                    value={newProduct.category_id} 
+                    onChange={e => {
+                      const cat = categories.find(c => c.id === e.target.value);
+                      setNewProduct({...newProduct, category_id: e.target.value, type: cat?.name || ''});
+                    }} 
+                    className="w-full bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 outline-none"
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col-span-2 space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Description</label>
+                  <textarea value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 outline-none h-24" placeholder="Product details..." />
+                </div>
+                <div className="col-span-2 space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Image URL</label>
+                  <input type="text" value={newProduct.image_url} onChange={e => setNewProduct({...newProduct, image_url: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 outline-none" placeholder="https://example.com/image.png" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-500 uppercase">Base Price ($)</label>
@@ -874,10 +1082,38 @@ export const AdminDashboard: React.FC = () => {
                   <label className="text-xs font-bold text-slate-500 uppercase">Stock</label>
                   <input type="number" value={newProduct.stock_quantity} onChange={e => setNewProduct({...newProduct, stock_quantity: Number(e.target.value)})} className="w-full bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 outline-none" />
                 </div>
+                <div className="space-y-2 flex items-end pb-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={newProduct.availability} onChange={e => setNewProduct({...newProduct, availability: e.target.checked})} className="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary" />
+                    <span className="text-xs font-bold text-slate-500 uppercase">Active</span>
+                  </label>
+                </div>
               </div>
               <div className="flex gap-4">
                 <button onClick={() => setShowProductModal(false)} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 rounded-2xl font-bold">Cancel</button>
-                <button onClick={handleCreateProduct} className="flex-1 py-4 bg-primary text-white rounded-2xl font-bold">Create Product</button>
+                <button onClick={handleCreateProduct} className="flex-1 py-4 bg-primary text-white rounded-2xl font-bold">{newProduct.id ? 'Save Changes' : 'Create Product'}</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {showCategoryModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white dark:bg-slate-900 rounded-[2rem] max-w-md w-full p-8 shadow-2xl border border-white/10">
+              <h2 className="text-2xl font-bold mb-6 text-[#1F2937] dark:text-white">{newCategory.id ? 'Edit Category' : 'Add New Category'}</h2>
+              <div className="space-y-4 mb-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Category Name</label>
+                  <input type="text" value={newCategory.name} onChange={e => setNewCategory({...newCategory, name: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 outline-none" placeholder="e.g. Streaming" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Logo Image URL</label>
+                  <input type="text" value={newCategory.logo_image_url} onChange={e => setNewCategory({...newCategory, logo_image_url: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 outline-none" placeholder="https://example.com/logo.png" />
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <button onClick={() => setShowCategoryModal(false)} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 rounded-2xl font-bold">Cancel</button>
+                <button onClick={handleSaveCategory} className="flex-1 py-4 bg-primary text-white rounded-2xl font-bold">{newCategory.id ? 'Save Changes' : 'Create Category'}</button>
               </div>
             </motion.div>
           </div>

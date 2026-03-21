@@ -15,6 +15,7 @@ export interface SupplierProduct {
 }
 
 export interface SupplierCategory {
+  id?: string;
   name: string;
   icon: string;
 }
@@ -27,6 +28,13 @@ export interface SupplierPayload {
 // ─── Fetch Products & Categories ─────────────────────────────────────────────
 export const fetchResellerProducts = async (): Promise<SupplierPayload | null> => {
   try {
+    const { data: categoriesData, error: catError } = await supabase
+      .from('categories')
+      .select('*')
+      .order('name');
+      
+    if (catError) throw catError;
+
     const { data: products, error } = await supabase
       .from('products')
       .select('*')
@@ -34,25 +42,22 @@ export const fetchResellerProducts = async (): Promise<SupplierPayload | null> =
 
     if (error) throw error;
 
-    const categoriesMap = new Map();
-    products.forEach(p => {
-      if (p.type && !categoriesMap.has(p.type)) {
-        categoriesMap.set(p.type, { name: p.type, icon: p.icon_url || '' });
-      }
-    });
-
     return {
-      categories: Array.from(categoriesMap.values()),
+      categories: categoriesData.map(c => ({
+        id: c.id,
+        name: c.name,
+        icon: c.logo_image_url || ''
+      })),
       products: products.map(p => ({
         id: p.id,
         name: p.name,
-        type: p.type,
+        type: categoriesData.find(c => c.id === p.category_id)?.name || p.type,
         price: p.price,
         base_price: p.base_price,
         supplier_id: p.supplier_id,
         availability: p.availability,
         description: p.description,
-        iconUrl: p.icon_url
+        iconUrl: p.image_url || p.icon_url
       }))
     };
   } catch (error) {
@@ -231,4 +236,23 @@ export const testSupplierConnection = async (id: string) => {
   });
   
   return await response.json();
+};
+// ─── Categories ────────────────────────────────────────────────────────────
+
+export const createCategory = async (category: any) => {
+  const { data, error } = await supabase.from('categories').insert([category]).select().single();
+  if (error) throw error;
+  return data;
+};
+
+export const updateCategory = async (id: string, updates: any) => {
+  const { data, error } = await supabase.from('categories').update(updates).eq('id', id).select().single();
+  if (error) throw error;
+  return data;
+};
+
+export const deleteCategory = async (id: string) => {
+  const { error } = await supabase.from('categories').delete().eq('id', id);
+  if (error) throw error;
+  return true;
 };

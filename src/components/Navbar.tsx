@@ -20,6 +20,7 @@ interface NavbarProps {
   onNumberVerificationClick: () => void;
   onGiftsClick: () => void;
   onAdminClick: () => void;
+  onCategoryClick: (category: string) => void;
   isDarkMode: boolean;
   toggleDarkMode: () => void;
   showSecondaryNav?: boolean;
@@ -41,6 +42,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onNumberVerificationClick,
   onGiftsClick,
   onAdminClick,
+  onCategoryClick,
   isDarkMode,
   toggleDarkMode,
   showSecondaryNav = true,
@@ -50,6 +52,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCurrencyOpen, setIsCurrencyOpen] = useState(false);
+  const [isProductsExpanded, setIsProductsExpanded] = useState(false); // New state
   const { user, profile, signOut } = useAuth();
   const { currency, setCurrency, formatPrice } = useCurrency();
   const [categories, setCategories] = useState<{ name: string; icon: string }[]>([]);
@@ -74,6 +77,17 @@ export const Navbar: React.FC<NavbarProps> = ({
               uniqueCategories.push({ ...cat, name: normalized });
             }
           });
+          // Sort categories by priority: Facebook, Instagram, Twitter, TikTok first
+          const priority = ['Facebook', 'Instagram', 'Twitter', 'TikTok'];
+          uniqueCategories.sort((a, b) => {
+            const indexA = priority.indexOf(a.name);
+            const indexB = priority.indexOf(b.name);
+            if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+            if (indexA !== -1) return -1;
+            if (indexB !== -1) return 1;
+            return a.name.localeCompare(b.name);
+          });
+
           setCategories(uniqueCategories);
         }
       } catch(e) {}
@@ -336,28 +350,61 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 Home
               </button>
+
               <button 
-                onClick={() => { onAllProductsClick(); setIsMobileMenuOpen(false); }}
+                onClick={() => setIsProductsExpanded(!isProductsExpanded)}
+                className={cn(
+                  "w-full text-left px-4 py-3 rounded-xl font-medium flex items-center justify-between transition-colors",
+                  isProductsExpanded ? "bg-primary/5 text-primary" : "text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  All Products
+                </div>
+                <ChevronDown size={18} className={cn("transition-transform duration-300", isProductsExpanded && "rotate-180")} />
+              </button>
+
+              <AnimatePresence>
+                {isProductsExpanded && (
+                  <motion.div 
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden bg-slate-50/50 dark:bg-white/5 mx-2 rounded-xl"
+                  >
+                    <div className="py-2 px-2 flex flex-col gap-1">
+                      <button 
+                        onClick={() => { onAllProductsClick(); setIsMobileMenuOpen(false); }}
+                        className="w-full text-left px-4 py-2 rounded-lg text-sm font-bold text-primary hover:bg-primary/10"
+                      >
+                        View All Catalog
+                      </button>
+                      
+                      <div className="h-px bg-slate-100 dark:bg-white/5 my-1" />
+                      
+                      {categories.map((cat, i) => (
+                        <button 
+                          key={i}
+                          onClick={() => { onCategoryClick(cat.name); setIsMobileMenuOpen(false); }}
+                          className="w-full text-left px-4 py-2 rounded-lg text-sm text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 flex items-center gap-3 transition-colors"
+                        >
+                          {cat.icon && (
+                            <img src={cat.icon} alt="" className="w-5 h-5 rounded-md object-cover" />
+                          )}
+                          {cat.name}
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <button 
+                onClick={() => { onNumberVerificationClick(); setIsMobileMenuOpen(false); }}
                 className="w-full text-left px-4 py-3 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
               >
-                All Products
+                Number Verification
               </button>
-              
-              <div className="my-2 border-t border-slate-100 dark:border-slate-800" />
-              <span className="px-4 text-xs font-bold text-[#6B7280] dark:text-slate-400 uppercase tracking-wider mb-2">Categories</span>
-              
-              {categories.map((cat, i) => (
-                <button 
-                  key={i}
-                  onClick={() => { onAllProductsClick(); setIsMobileMenuOpen(false); }}
-                  className="w-full text-left px-4 py-2 rounded-xl text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3"
-                >
-                  {cat.icon && (
-                    <img src={cat.icon} alt="" className="w-5 h-5 rounded-md object-cover" />
-                  )}
-                  {cat.name}
-                </button>
-              ))}
               
               <div className="my-2 border-t border-slate-100 dark:border-slate-800" />
               
@@ -368,12 +415,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                     className="w-full text-left px-4 py-3 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3"
                   >
                     Order History
-                  </button>
-                  <button 
-                    onClick={() => { onNumberVerificationClick(); setIsMobileMenuOpen(false); }}
-                    className="w-full text-left px-4 py-3 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3"
-                  >
-                    Number Verification
                   </button>
                   <button 
                     onClick={() => { onGiftsClick(); setIsMobileMenuOpen(false); }}

@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      categories: {
+        Row: {
+          id: string
+          name: string
+          logo_image_url: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          logo_image_url?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          logo_image_url?: string | null
+          created_at?: string | null
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           availability: boolean | null
@@ -23,6 +44,10 @@ export type Database = {
           price: number
           supplier_id: string | null
           type: string
+          description: string | null
+          image_url: string | null
+          category_id: string | null
+          created_by: string | null
         }
         Insert: {
           availability?: boolean | null
@@ -32,6 +57,10 @@ export type Database = {
           price: number
           supplier_id?: string | null
           type: string
+          description?: string | null
+          image_url?: string | null
+          category_id?: string | null
+          created_by?: string | null
         }
         Update: {
           availability?: boolean | null
@@ -41,6 +70,10 @@ export type Database = {
           price?: number
           supplier_id?: string | null
           type?: string
+          description?: string | null
+          image_url?: string | null
+          category_id?: string | null
+          created_by?: string | null
         }
         Relationships: []
       }

@@ -94,7 +94,20 @@ export const AllProducts: React.FC<AllProductsProps> = ({ onAddToCart, initialCa
     <div className="pt-24 pb-20 px-4 md:px-6 max-w-7xl mx-auto min-h-screen">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12">
         <div>
-          <h1 className="text-4xl md:text-5xl font-bold font-display mb-4 text-[#1F2937]">All Products</h1>
+        <div className="flex items-center gap-6 mb-4">
+          {activeCategory !== 'All' && categories.find(c => c.name === activeCategory)?.icon && (
+            <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl overflow-hidden shadow-xl border border-slate-200 dark:border-white/10 shrink-0 bg-white">
+              <img 
+                src={categories.find(c => c.name === activeCategory)?.icon} 
+                alt={activeCategory} 
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
+          <h1 className="text-4xl md:text-5xl font-bold font-display text-[#1F2937] dark:text-white">
+            {activeCategory === 'All' ? 'All Products' : activeCategory}
+          </h1>
+        </div>
           <p className="text-[#6B7280] max-w-xl">
             Browse our complete catalog of premium accounts, digital services, and subscriptions powered directly by our live supplier network.
           </p>
