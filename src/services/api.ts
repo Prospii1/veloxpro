@@ -27,11 +27,34 @@ export interface SupplierPayload {
 // ─── Fetch Products & Categories ─────────────────────────────────────────────
 export const fetchResellerProducts = async (): Promise<SupplierPayload | null> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/reseller/products`);
-    if (!response.ok) throw new Error('Network response was not ok');
-    
-    const { data } = await response.json();
-    return data;
+    const { data: products, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('availability', true);
+
+    if (error) throw error;
+
+    const categoriesMap = new Map();
+    products.forEach(p => {
+      if (p.type && !categoriesMap.has(p.type)) {
+        categoriesMap.set(p.type, { name: p.type, icon: p.icon_url || '' });
+      }
+    });
+
+    return {
+      categories: Array.from(categoriesMap.values()),
+      products: products.map(p => ({
+        id: p.id,
+        name: p.name,
+        type: p.type,
+        price: p.price,
+        base_price: p.base_price,
+        supplier_id: p.supplier_id,
+        availability: p.availability,
+        description: p.description,
+        iconUrl: p.icon_url
+      }))
+    };
   } catch (error) {
     console.error('Error fetching reseller products:', error);
     return null;
