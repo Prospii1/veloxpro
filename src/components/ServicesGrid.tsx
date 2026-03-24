@@ -56,7 +56,9 @@ export const ServicesGrid: React.FC<ServicesGridProps> = ({ onAddToCart, onViewA
               icon: product.iconUrl || 'Zap',
               deliveryTime: 'Instant',
               rating: 5.0,
-              reviews: Math.floor(Math.random() * 500) + 50
+              reviews: Math.floor(Math.random() * 500) + 50,
+              stock_quantity: product.stock_quantity,
+              availability: product.availability
             };
           });
 

@@ -8,6 +8,7 @@ export const Hero: React.FC = () => {
   const images = [
     "/assets/verification.png",
     "/assets/security.png",
+    "/assets/presence.png",
   ];
 
   return (

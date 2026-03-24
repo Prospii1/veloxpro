@@ -15,6 +15,9 @@ export interface Service {
   reviews: number;
   icon?: any;
   features?: string[];
+  stock_quantity?: number | null;
+  availability?: boolean;
+  supplier_id?: string | null;
 }
 
 export interface CartItem {

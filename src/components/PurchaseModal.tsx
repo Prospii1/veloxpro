@@ -19,17 +19,51 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({ product, onClose, 
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [quantity, setQuantity] = useState(1);
   
   // OTP States
   const [otpStep, setOtpStep] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [otpVerifying, setOtpVerifying] = useState(false);
 
-  if (!product || !user || !profile) return null;
+  // Stock Sync States
+  const [syncedStock, setSyncedStock] = useState<number | null>(product?.stock_quantity ?? null);
+  const [syncing, setSyncing] = useState(false);
 
+  React.useEffect(() => {
+    const syncStock = async () => {
+      // Guard: only sync if product and user exist and has a supplier
+      if (!product?.id || !product?.supplier_id || !user?.id) return;
+      
+      setSyncing(true);
+      try {
+        const resp = await fetch('/api/reseller/sync-stock', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productId: product.id })
+        });
+        const data = await resp.json();
+        if (data.success && data.stock !== undefined) {
+          setSyncedStock(data.stock);
+        }
+      } catch (err) {
+        console.error("Failed to sync stock:", err);
+      } finally {
+        setSyncing(false);
+      }
+    };
+    syncStock();
+  }, [product?.id, product?.supplier_id]);
+
+  if (!product || !user || !profile) return null;
+ 
   const currentBalance = profile.wallet_balance || 0;
-  const price = product.pricePer1000;
-  const canAfford = currentBalance >= price;
+  const unitPrice = product.pricePer1000;
+  const maxStock = syncedStock ?? 999999;
+  const isOutOfStock = (syncedStock !== null && syncedStock <= 0) || product.availability === false;
+
+  const totalPrice = unitPrice * quantity;
+  const canAfford = currentBalance >= totalPrice;
 
   const handleInitiatePurchase = async () => {
     if (!canAfford) {
@@ -80,7 +114,8 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({ product, onClose, 
         product.name,
         "the-socialmarket", 
         user.id, 
-        price
+        unitPrice,
+        quantity
       );
       
       if (!supplierResponse.success) throw new Error(supplierResponse.error || "Supplier API failed.");
@@ -88,7 +123,7 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({ product, onClose, 
       // 2. Log the activity locally for analytics
       await supabase.rpc('log_user_activity', {
         p_action_type: 'Product Purchase',
-        p_description: `User purchased ${product.name} for ${formatPrice(price)}.`,
+        p_description: `User purchased ${quantity}x ${product.name} for ${formatPrice(totalPrice)}.`,
         p_device_info: navigator.userAgent
       });
 
@@ -179,10 +214,65 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({ product, onClose, 
             <div className="space-y-4 mb-8">
               <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
                 <p className="text-[10px] uppercase text-[#6B7280] font-bold mb-1">Product</p>
-                <p className="font-bold text-[#1F2937] dark:text-white line-clamp-1">{product.name}</p>
-                <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center">
-                  <span className="text-sm font-bold text-[#6B7280] dark:text-slate-400">Price</span>
-                  <span className="text-xl font-black text-primary">{formatPrice(price)}</span>
+                <p className="font-bold text-[#1F2937] dark:text-white line-clamp-1 mb-3">{product.name}</p>
+                
+                <div className="space-y-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-[#6B7280] dark:text-slate-400 font-bold uppercase">Unit Price</span>
+                    <span className="font-bold text-[#1F2937] dark:text-white">{formatPrice(unitPrice)}</span>
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#6B7280] dark:text-slate-400 font-bold uppercase text-xs">Quantity</span>
+                    <div className={cn(
+                      "flex items-center gap-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 p-1",
+                      isOutOfStock && "opacity-50 pointer-events-none"
+                    )}>
+                      <button 
+                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                        className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors font-bold"
+                      >
+                        -
+                      </button>
+                      <input 
+                        type="number" 
+                        min="1"
+                        max={maxStock}
+                        value={quantity}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 1;
+                          setQuantity(Math.min(maxStock, Math.max(1, val)));
+                        }}
+                        className="w-12 text-center bg-transparent border-none outline-none font-bold text-sm dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <button 
+                        onClick={() => setQuantity(Math.min(maxStock, quantity + 1))}
+                        className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors font-bold"
+                        disabled={quantity >= maxStock}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {syncedStock !== null && (
+                    <div className="flex justify-between items-center text-[10px] font-bold">
+                      <span className="text-slate-400 uppercase">Stock Availability</span>
+                      <div className="flex items-center gap-2">
+                        {syncing && <Loader2 size={10} className="animate-spin text-primary" />}
+                        <span className={cn(
+                          isOutOfStock ? "text-red-500" : "text-emerald-500"
+                        )}>
+                          {isOutOfStock ? "Out of Stock" : `${syncedStock} units available`}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="pt-3 border-t border-dashed border-slate-200 dark:border-slate-700 flex justify-between items-center">
+                    <span className="text-sm font-bold text-primary uppercase">Total Price</span>
+                    <span className="text-2xl font-black text-primary">{formatPrice(totalPrice)}</span>
+                  </div>
                 </div>
               </div>
 
@@ -203,20 +293,24 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({ product, onClose, 
 
             <button 
               onClick={handleInitiatePurchase}
-              disabled={loading}
+              disabled={loading || isOutOfStock}
               className={cn(
                 "w-full py-4 rounded-2xl font-bold text-white transition-all shadow-xl flex items-center justify-center gap-2",
-                !canAfford 
-                  ? 'bg-amber-500 shadow-amber-500/20' 
-                  : 'bg-primary shadow-primary/20 hover:scale-[1.02] active:scale-95'
+                isOutOfStock 
+                  ? 'bg-slate-400 cursor-not-allowed shadow-none'
+                  : !canAfford 
+                    ? 'bg-amber-500 shadow-amber-500/20' 
+                    : 'bg-primary shadow-primary/20 hover:scale-[1.02] active:scale-95'
               )}
             >
               {loading ? (
                 <Loader2 size={22} className="animate-spin" />
+              ) : isOutOfStock ? (
+                'Out of Stock'
               ) : !canAfford ? (
                 'Add Funds to Wallet'
               ) : (
-                'Confirm & Pay'
+                `Confirm & Pay — ${formatPrice(totalPrice)}`
               )}
             </button>
           </div>

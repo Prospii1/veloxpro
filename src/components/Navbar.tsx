@@ -105,7 +105,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-4">
           <button 
-            className="md:hidden p-2 -ml-2 text-slate-600 dark:text-slate-400"
+            className="p-2 -ml-2 text-slate-600 dark:text-slate-400 hover:text-primary transition-colors"
             onClick={() => setIsMobileMenuOpen(true)}
           >
             <Menu size={24} />
@@ -180,89 +180,17 @@ export const Navbar: React.FC<NavbarProps> = ({
             </AnimatePresence>
           </div>
           
-          <div className="hidden md:flex items-center gap-2">
-            {user ? (
-              <div className="flex items-center gap-4">
-                <button 
-                  onClick={onOrderHistoryClick}
-                  className="text-sm font-bold px-2 py-2 text-[#1F2937] dark:text-slate-300 hover:text-primary transition-colors"
-                >
-                  Order History
-                </button>
-                <button 
-                  onClick={onNumberVerificationClick}
-                  className="text-sm font-bold px-2 py-2 text-[#1F2937] dark:text-slate-300 hover:text-primary transition-colors"
-                >
-                  Number Verification
-                </button>
-                <button 
-                  onClick={onGiftsClick}
-                  className="text-sm font-bold px-2 py-2 text-[#1F2937] dark:text-slate-300 hover:text-primary transition-colors"
-                >
-                  Order a Gift
-                </button>
-                {profile?.role === 'Admin' && (
-                  <button 
-                    onClick={onAdminClick}
-                    className="text-sm font-bold px-2 py-2 text-primary hover:text-primary transition-colors border-2 border-primary/20 rounded-xl px-4"
-                  >
-                    Admin
-                  </button>
-                )}
-                <button 
-                  onClick={onProfileClick}
-                  className="text-sm font-bold px-2 py-2 text-[#1F2937] dark:text-slate-300 hover:text-primary transition-colors"
-                >
-                  Profile
-                </button>
-                <button 
-                  onClick={onFundWalletClick}
-                  className="text-sm font-bold px-2 py-2 text-emerald-500 hover:text-emerald-400 transition-colors"
-                >
-                  Fund Wallet
-                </button>
-                <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 py-1.5 px-3 rounded-full cursor-default border border-emerald-100 dark:border-emerald-800">
-                  <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                    {formatPrice(profile?.wallet_balance || 0)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 py-1.5 px-3 rounded-full cursor-default">
-                  <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white text-xs">
-                    <User size={14} />
-                  </div>
-                  <span className="text-sm font-bold text-[#1F2937] dark:text-white">
-                    {user.user_metadata?.username || user.email?.split('@')[0]}
-                  </span>
-                </div>
-                <button 
-                  onClick={toggleDarkMode}
-                  className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-yellow-400 hover:scale-110 transition-all border border-slate-200 dark:border-slate-700"
-                  title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-                >
-                  {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-                </button>
-                <button 
-                  onClick={signOut}
-                  className="text-sm font-bold px-4 py-2 text-red-500 hover:text-red-600 transition-colors"
-                >
-                  Logout
-                </button>
+          <div className="flex items-center gap-2">
+            {user && (
+              <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 py-1.5 px-3 rounded-full cursor-default border border-emerald-100 dark:border-emerald-800">
+                <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                  {formatPrice(profile?.wallet_balance || 0)}
+                </span>
               </div>
-            ) : (
-              <>
-                <button 
-                  onClick={toggleDarkMode}
-                  className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-yellow-400 hover:scale-110 transition-all border border-slate-200 dark:border-slate-700"
-                  title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-                >
-                  {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-                </button>
-                <button 
-                  onClick={onNumberVerificationClick}
-                  className="text-sm font-bold px-4 py-2 text-[#1F2937] dark:text-slate-300 hover:text-primary transition-colors hidden lg:block"
-                >
-                  Number Verification
-                </button>
+            )}
+            
+            {!user && (
+              <div className="hidden md:flex items-center gap-2">
                 <button 
                   onClick={onLoginClick}
                   className="text-sm font-bold px-4 py-2 text-[#1F2937] dark:text-slate-300 hover:text-primary transition-colors"
@@ -275,12 +203,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                 >
                   Sign Up
                 </button>
-              </>
+              </div>
             )}
           </div>
 
-          {/* Mobile Profile Icon Shortcut */}
-          <div className="flex md:hidden items-center gap-2">
+          {/* Desktop/Mobile Profile Icon Shortcut */}
+          <div className="flex items-center gap-2">
             <button 
               onClick={user ? onProfileClick : onLoginClick}
               className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:scale-105 transition-transform"
@@ -309,7 +237,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed top-0 left-0 bottom-0 w-[80%] max-w-[300px] bg-white dark:bg-slate-900 z-50 shadow-2xl flex flex-col md:hidden"
+            className="fixed top-0 left-0 bottom-0 w-[80%] max-w-[300px] bg-white dark:bg-slate-900 z-50 shadow-2xl flex flex-col"
           >
             <div className="p-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-3">

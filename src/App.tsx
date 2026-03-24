@@ -11,6 +11,7 @@ import { Hero } from './components/Hero';
 import { ServicesGrid } from './components/ServicesGrid';
 import { Footer } from './components/Footer';
 import { Cart } from './components/Cart';
+import { TawkChat } from './components/TawkChat';
 import { Dashboard } from './components/Dashboard';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
@@ -125,7 +126,7 @@ export default function App() {
       />
 
       <AnimatePresence mode="wait">
-        {currentView === 'home' ? (
+        {(currentView === 'home' && !user) ? (
           <motion.div
             key="home"
             initial={{ opacity: 0 }}
@@ -184,7 +185,7 @@ export default function App() {
               </section>
             )}
           </motion.div>
-        ) : currentView === 'dashboard' ? (
+        ) : (currentView === 'dashboard' || (currentView === 'home' && user)) ? (
           <motion.div
             key="dashboard"
             initial={{ opacity: 0 }}
@@ -194,6 +195,12 @@ export default function App() {
           >
             <Dashboard 
               onDocumentationClick={() => setCurrentView('api-docs')} 
+              onFundWalletClick={() => setCurrentView('payment-gateway')}
+              onGiftsClick={() => setCurrentView('gifts')}
+              onNumberVerificationClick={() => setCurrentView('number-verification')}
+              onOrderHistoryClick={() => setCurrentView('order-history')}
+              onCategoryClick={(category) => { setSelectedCategory(category); setCurrentView('all-products'); }}
+              onAddToCart={(service) => setSelectedService(service)}
             />
           </motion.div>
         ) : currentView === 'all-products' ? (
@@ -351,6 +358,7 @@ export default function App() {
           setCurrentView('payment-gateway');
         }}
       />
+      <TawkChat />
     </div>
   );
 }

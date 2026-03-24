@@ -12,6 +12,7 @@ export interface AuthRequest extends Request {
   user?: {
     id: string;
     email?: string;
+    token?: string; // Add token to the request
   };
 }
 
@@ -34,6 +35,7 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
     req.user = {
       id: user.id,
       email: user.email,
+      token: token // Store the token
     };
     next();
   } catch (error) {

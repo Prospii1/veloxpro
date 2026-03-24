@@ -70,8 +70,10 @@ export const OrderHistory: React.FC = () => {
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
                   <th className="px-6 py-4 text-xs font-bold text-[#6B7280] uppercase tracking-wider">Transaction</th>
-                  <th className="px-6 py-4 text-xs font-bold text-[#6B7280] uppercase tracking-wider">Details</th>
-                  <th className="px-6 py-4 text-xs font-bold text-[#6B7280] uppercase tracking-wider">Amount</th>
+                  <th className="px-6 py-4 text-xs font-bold text-[#6B7280] uppercase tracking-wider">Product</th>
+                  <th className="px-6 py-4 text-xs font-bold text-[#6B7280] uppercase tracking-wider text-center">Qty</th>
+                  <th className="px-6 py-4 text-xs font-bold text-[#6B7280] uppercase tracking-wider text-center">Unit Price</th>
+                  <th className="px-6 py-4 text-xs font-bold text-[#6B7280] uppercase tracking-wider">Total</th>
                   <th className="px-6 py-4 text-xs font-bold text-[#6B7280] uppercase tracking-wider">Date</th>
                   <th className="px-6 py-4 text-xs font-bold text-[#6B7280] uppercase tracking-wider">Status</th>
                 </tr>
@@ -92,13 +94,23 @@ export const OrderHistory: React.FC = () => {
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-[#6B7280] dark:text-slate-300">
-                      {tx.products?.name ? tx.products.name : '-'}
+                    <td className="px-6 py-4 text-sm font-medium text-[#1F2937] dark:text-white">
+                      {tx.products?.name ? tx.products.name : (tx.description?.split('x ')[1] || '-')}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="text-sm font-bold text-slate-500 dark:text-slate-400">
+                        {tx.quantity || 1}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="text-sm font-bold text-[#1F2937] dark:text-white">
+                        ${Number(tx.unit_price || tx.amount).toFixed(2)}
+                      </span>
                     </td>
                     <td className="px-6 py-4">
                       <span className={cn(
                         "font-bold text-sm",
-                        tx.type === 'Funding' ? "text-emerald-500" : "text-[#1F2937] dark:text-white"
+                        tx.type === 'Funding' ? "text-emerald-500" : "text-primary"
                       )}>
                         {tx.type === 'Funding' ? '+' : '-'}${Number(tx.amount).toFixed(2)}
                       </span>

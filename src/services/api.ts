@@ -12,6 +12,7 @@ export interface SupplierProduct {
   availability: boolean;
   description: string;
   iconUrl: string;
+  stock_quantity?: number | null;
 }
 
 export interface SupplierCategory {
@@ -67,7 +68,7 @@ export const fetchResellerProducts = async (): Promise<SupplierPayload | null> =
 };
 
 // ─── Purchase Account ────────────────────────────────────────────────────────
-export const purchaseSupplierAccount = async (productId: string, productName: string, supplierId: string, userId: string, amount: number) => {
+export const purchaseSupplierAccount = async (productId: string, productName: string, supplierId: string, userId: string, amount: number, quantity: number = 1) => {
   try {
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token;
@@ -78,7 +79,7 @@ export const purchaseSupplierAccount = async (productId: string, productName: st
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ productId, productName, supplierId, userId, amount }),
+      body: JSON.stringify({ productId, productName, supplierId, userId, amount, quantity }),
     });
     
     if (!response.ok) throw new Error('Failed to complete supplier purchase');
@@ -178,8 +179,9 @@ export const fetchSuppliers = async () => {
   const response = await fetch(`${API_BASE_URL}/admin/suppliers`, {
     headers: { 'Authorization': `Bearer ${token}` }
   });
-  if (!response.ok) throw new Error('Failed to fetch suppliers');
-  return await response.json();
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || 'Failed to fetch suppliers');
+  return result;
 };
 
 export const createSupplier = async (supplier: Partial<Supplier>) => {
@@ -194,8 +196,9 @@ export const createSupplier = async (supplier: Partial<Supplier>) => {
     },
     body: JSON.stringify(supplier),
   });
-  if (!response.ok) throw new Error('Failed to create supplier');
-  return await response.json();
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || 'Failed to create supplier');
+  return result;
 };
 
 export const updateSupplier = async (id: string, updates: Partial<Supplier>) => {
@@ -210,8 +213,9 @@ export const updateSupplier = async (id: string, updates: Partial<Supplier>) => 
     },
     body: JSON.stringify(updates),
   });
-  if (!response.ok) throw new Error('Failed to update supplier');
-  return await response.json();
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || 'Failed to update supplier');
+  return result;
 };
 
 export const deleteSupplier = async (id: string) => {
@@ -222,8 +226,9 @@ export const deleteSupplier = async (id: string) => {
     method: 'DELETE',
     headers: { 'Authorization': `Bearer ${token}` }
   });
-  if (!response.ok) throw new Error('Failed to delete supplier');
-  return await response.json();
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || 'Failed to delete supplier');
+  return result;
 };
 
 export const testSupplierConnection = async (id: string) => {

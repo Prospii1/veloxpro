@@ -40,7 +40,8 @@ const purchaseSchema = z.object({
   productName: z.string().optional(),
   productType: z.string().min(1),
   supplierId: z.string().optional(),
-  amount: z.number().positive()
+  amount: z.number().positive(),
+  quantity: z.number().min(1)
 });
 
 const fundSchema = z.object({
@@ -83,6 +84,7 @@ app.get('/api/reseller/products', async (req, res) => {
           base_price: p.base_price,
           supplier_id: p.supplier_id,
           availability: p.availability,
+          stock_quantity: p.stock_quantity,
           description: p.description,
           iconUrl: p.icon_url
         }))
@@ -91,6 +93,52 @@ app.get('/api/reseller/products', async (req, res) => {
   } catch (error: any) {
     console.error('API Error:', error.message);
     res.status(500).json({ success: false, error: 'Failed to fetch products' });
+  }
+});
+
+// ─── 1.5 Sync Product Stock (Supplier API) ───────────────────────────────────
+app.post('/api/reseller/sync-stock', authenticate as any, async (req: AuthRequest, res) => {
+  try {
+    const { productId } = req.body;
+    if (!productId) return res.status(400).json({ success: false, error: 'Missing productId' });
+
+    const { data: product } = await supabase.from('products').select('*').eq('id', productId).single();
+    if (!product || !product.supplier_id) return res.json({ success: true, stock: product?.stock_quantity });
+
+    const { data: supplier } = await supabase.from('suppliers').select('*').eq('id', product.supplier_id).single();
+    if (!supplier || supplier.status !== 'active') return res.json({ success: true, stock: product.stock_quantity });
+
+    // Standard supplier "services" call
+    const params = new URLSearchParams();
+    params.append('action', 'services');
+    params.append('api_key', supplier.api_key);
+
+    const supplierResp = await fetch(`${supplier.base_url}/services.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params
+    });
+
+    const services = await supplierResp.json();
+    if (Array.isArray(services)) {
+      const supplierProdId = productId.includes('-') ? productId.split('-')[1] : productId;
+      const remoteProduct = services.find(s => String(s.service) === String(supplierProdId) || String(s.id) === String(supplierProdId));
+      
+      if (remoteProduct && remoteProduct.stock !== undefined && remoteProduct.stock !== null) {
+        const newStock = parseInt(remoteProduct.stock);
+        if (!isNaN(newStock)) {
+          await supabase.from('products').update({ 
+            stock_quantity: newStock, 
+            availability: newStock > 0 
+          }).eq('id', productId);
+          return res.json({ success: true, stock: newStock });
+        }
+      }
+    }
+    res.json({ success: true, stock: product.stock_quantity });
+  } catch (error: any) {
+    console.error('Stock Sync Error:', error.message);
+    res.status(500).json({ success: false, error: 'Failed to sync stock' });
   }
 });
 
@@ -200,90 +248,104 @@ setInterval(syncSupplierProducts, 10 * 60 * 1000);
 app.post('/api/reseller/purchase', purchaseLimiter, authenticate as any, async (req: AuthRequest, res) => {
   try {
     const validated = purchaseSchema.parse(req.body);
-    const { productId, productName, productType, supplierId, amount } = validated;
+    const { productId, productName, productType, supplierId, amount: unitPrice, quantity } = validated;
     const userId = req.user?.id;
     
     if (!userId) {
       return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
 
-    // 1. Verify user and balance
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('wallet_balance, email')
-      .eq('id', userId)
-      .single();
+    const totalAmount = unitPrice * quantity;
 
-    if (profileError || !profile) throw new Error("User profile not found");
-    if (profile.wallet_balance < amount) {
-      return res.status(400).json({ success: false, error: 'Insufficient wallet balance' });
+    // 1. Atomic Purchase (Checks balance, stock, and deducts both)
+    const { data: result, error: rpcError } = await supabase.rpc('purchase_product_atomic', {
+      p_user_id: userId,
+      p_product_id: productId,
+      p_quantity: quantity,
+      p_total_amount: totalAmount
+    });
+
+    if (rpcError) throw rpcError;
+    if (result.success === false) {
+      return res.status(400).json({ success: false, error: result.error || 'Transaction failed' });
     }
 
     // 2. Determine if Supplier or Local
-    let credentials = null;
-    if (productType === 'supplier_product') {
-      // Find the specific supplier for this product
-      const { data: productData } = await supabase.from('products').select('supplier_id').eq('id', productId).single();
-      const activeSupplierId = productData?.supplier_id || supplierId;
+    let credentials: any = null;
+    if (productType === 'supplier_product' || productId.includes('-')) {
+      try {
+        // Find the specific supplier for this product
+        const { data: productData } = await supabase.from('products').select('supplier_id').eq('id', productId).single();
+        const activeSupplierId = productData?.supplier_id || supplierId;
 
-      if (!activeSupplierId) throw new Error("No supplier linked to this product");
+        if (!activeSupplierId) throw new Error("No supplier linked to this product");
 
-      const { data: supplier } = await supabase
-        .from('suppliers')
-        .select('*')
-        .eq('id', activeSupplierId)
-        .single();
+        const { data: supplier } = await supabase
+          .from('suppliers')
+          .select('*')
+          .eq('id', activeSupplierId)
+          .single();
 
-      if (!supplier || supplier.status !== 'active') {
-        throw new Error("Linked supplier is inactive or not found");
-      }
+        if (!supplier || supplier.status !== 'active') {
+          throw new Error("Linked supplier is inactive or not found");
+        }
 
-      const params = new URLSearchParams();
-      params.append('action', 'buyProduct');
-      // The product ID at the supplier was the part after the prefix
-      const supplierProdId = productId.includes('-') ? productId.split('-')[1] : productId;
-      params.append('id', supplierProdId);
-      params.append('amount', '1');
-      params.append('api_key', supplier.api_key);
+        // We purchase multiple times if quantity > 1 (Option B as some APIs only give 1 log per request)
+        const allCredentials = [];
+        for (let i = 0; i < quantity; i++) {
+          const params = new URLSearchParams();
+          params.append('action', 'buyProduct');
+          const supplierProdId = productId.includes('-') ? productId.split('-')[1] : productId;
+          params.append('id', supplierProdId);
+          params.append('amount', '1');
+          params.append('api_key', supplier.api_key);
 
-      const supplierResp = await fetch(`${supplier.base_url}/buy_product.php`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: params
-      });
+          const supplierResp = await fetch(`${supplier.base_url}/buy_product.php`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params
+          });
 
-      const data = await supplierResp.json();
+          const data = await supplierResp.json();
 
-      if (data.status !== 'success') {
-        console.error("Supplier purchase failed:", data);
-        await supabase.from('system_logs').insert({
-          event_type: 'order_failure',
-          message: `Supplier ${supplier.name} error: ${data.msg}`,
-          details: { productId, userId, supplierMsg: data.msg }
+          if (data.status !== 'success') {
+            throw new Error(data.msg || `Supplier purchase failed (item ${i+1}/${quantity})`);
+          }
+
+          const rawData = data.data?.[0] || "No Data Fetched";
+          const parts = rawData.split('|');
+          allCredentials.push(parts.length >= 2 
+            ? { username: parts[0], password: parts[1], notes: `Item ${i+1}/${quantity}` }
+            : { username: rawData, password: "See username string", notes: `Raw account dump ${i+1}/${quantity}` });
+        }
+        
+        credentials = quantity === 1 ? allCredentials[0] : allCredentials;
+      } catch (err: any) {
+        console.error("Supplier purchase failed, rolling back transaction:", err);
+        // Rollback: Refund user
+        await supabase.rpc('refund_product_atomic', {
+          p_user_id: userId,
+          p_product_id: productId,
+          p_quantity: quantity,
+          p_total_amount: totalAmount
         });
-        return res.status(400).json({ success: false, error: data.msg || 'Supplier transaction rejected.' });
+        return res.status(400).json({ success: false, error: err.message || 'Supplier transaction failed.' });
       }
-
-      const rawData = data.data?.[0] || "No Data Fetched";
-      const parts = rawData.split('|');
-      credentials = parts.length >= 2 
-        ? { username: parts[0], password: parts[1], notes: "Purchased Account Data" }
-        : { username: rawData, password: "See username string", notes: "Raw account dump" };
     } else {
-      // Local gift purchase logic
-      credentials = { info: "Digital gift delivered to account room." };
+      credentials = { info: `Digital gift (${quantity} items) delivered to account room.` };
     }
 
-    // 3. Success: Deduct wallet and store order
-
+    // 4. Store order
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
         user_id: userId,
         product_id: productId,
-        product_name: req.body.productName || 'Supplier Product',
-        product_type: 'supplier_product',
-        amount,
+        product_name: productName || 'Supplier Product',
+        product_type: productType || 'supplier_product',
+        amount: totalAmount,
+        quantity: quantity,
+        unit_price: unitPrice,
         status: 'completed',
         delivery_details: credentials
       })
@@ -442,8 +504,32 @@ app.post('/api/wallet/fund', authenticate as any, async (req: AuthRequest, res) 
       return res.status(400).json({ success: false, error: 'Invalid amount. Minimum is $1.' });
     }
 
-    const reference = `VLX-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+    const userToken = req.user?.token;
+
+    // Use a client authorized as the current user so RLS works
+    const userSupabase = createClient(supabaseUrl, supabaseKey, {
+      global: { headers: { Authorization: `Bearer ${userToken}` } }
+    });
+
+    const reference = `VLX-TEMP-${Date.now()}`;
     const korapayKey = process.env.KORAPAY_SECRET_KEY;
+
+    // ALWAYS create a pending transaction record first
+    const { data: tx, error: txError } = await userSupabase.from('transactions').insert({
+      user_id: userId,
+      amount,
+      type: 'Funding',
+      status: 'Pending',
+      payment_reference: reference,
+      payment_provider: korapayKey ? 'Korapay' : 'Korapay (Simulation)',
+      payment_method: 'Card/Transfer',
+      description: `Wallet funding via Korapay`
+    }).select().single();
+
+    if (txError) {
+      console.error('Failed to create pending transaction:', txError);
+      throw txError;
+    }
 
     if (!korapayKey) {
       // Simulated flow if no Korapay key configured
@@ -452,7 +538,7 @@ app.post('/api/wallet/fund', authenticate as any, async (req: AuthRequest, res) 
         success: true,
         data: {
           reference,
-          checkout_url: null, // No real URL — frontend will handle simulation
+          checkout_url: 'https://test-checkout.korapay.com/pay/D0OnAzDUL54CNph', 
           simulated: true,
           amount
         }
@@ -498,7 +584,7 @@ app.post('/api/wallet/fund', authenticate as any, async (req: AuthRequest, res) 
 });
 
 // ─── 4. Wallet Verify — Korapay Payment Verification ─────────────────────────
-app.post('/api/wallet/verify', async (req, res) => {
+app.post('/api/wallet/verify', authenticate as any, async (req: AuthRequest, res) => {
   try {
     const { reference } = req.body;
 
@@ -509,11 +595,31 @@ app.post('/api/wallet/verify', async (req, res) => {
     const korapayKey = process.env.KORAPAY_SECRET_KEY;
 
     if (!korapayKey) {
-      // Simulated verification
-      console.log('[SIMULATED] Payment verified for reference:', reference);
+      const userToken = req.user?.token;
+
+    // Use a client authorized as the current user
+    const userSupabase = createClient(supabaseUrl, supabaseKey, {
+      global: { headers: { Authorization: `Bearer ${userToken}` } }
+    });
+
+    // Simulated flow — process instantly by updating the database record
+    // The trigger 'update_wallet_stats' will handle balance increment automatically
+    const { data, error } = await userSupabase
+      .from('transactions')
+      .update({ status: 'Completed' })
+      .eq('payment_reference', reference)
+      .eq('status', 'Pending')
+      .select()
+      .single();
+
+      if (error) {
+        console.error('Failed to update simulated transaction:', error);
+        return res.status(400).json({ success: false, error: 'Transaction not found or already completed' });
+      }
+
       return res.json({
         success: true,
-        data: { verified: true, simulated: true }
+        data: { verified: true, simulated: true, tx: data }
       });
     }
 

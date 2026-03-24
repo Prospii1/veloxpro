@@ -58,10 +58,24 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onAddToCart }
         <div>
           <span className="text-[10px] text-[#6B7280] block leading-none mb-1">From</span>
           <span className="text-sm md:text-xl font-bold text-primary">{formatPrice(service.pricePer1000)}</span>
+          {service.stock_quantity !== undefined && service.stock_quantity !== null && (
+            <span className={cn(
+              "block text-[8px] md:text-[10px] font-bold mt-1 uppercase",
+              (service.stock_quantity <= 0 || service.availability === false) ? "text-red-500" : "text-emerald-500"
+            )}>
+              {(service.stock_quantity <= 0 || service.availability === false) ? "Out of Stock" : `${service.stock_quantity} available`}
+            </span>
+          )}
         </div>
         <button 
           onClick={() => onAddToCart(service)}
-          className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-primary text-white flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-lg shadow-primary/20"
+          disabled={service.stock_quantity === 0 || service.availability === false}
+          className={cn(
+            "w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all shadow-lg",
+            (service.stock_quantity === 0 || service.availability === false)
+              ? "bg-slate-300 dark:bg-slate-800 text-slate-500 cursor-not-allowed shadow-none"
+              : "bg-primary text-white hover:scale-110 active:scale-95 shadow-primary/20"
+          )}
         >
           <ArrowRight size={14} className="md:w-[18px] md:h-[18px]" />
         </button>

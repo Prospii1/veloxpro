@@ -23,7 +23,10 @@ import {
   ToggleLeft,
   ToggleRight,
   Edit2,
-  FolderOpen
+  FolderOpen,
+  Key,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../contexts/AuthContext';
@@ -99,7 +102,8 @@ export const AdminDashboard: React.FC = () => {
   const [showProductModal, setShowProductModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showGiftModal, setShowGiftModal] = useState(false);
-  const [newProduct, setNewProduct] = useState({ id: '', name: '', type: '', base_price: 0, markup: 0, stock_quantity: 0, description: '', icon_url: '', image_url: '', category_id: '', availability: true });
+  const [showSupplierKey, setShowSupplierKey] = useState(false);
+  const [newProduct, setNewProduct] = useState({ id: '', name: '', type: '', base_price: 0, markup: 0, stock_quantity: 0, description: '', icon_url: '', image_url: '', category_id: '', availability: true, created_by: '' });
   const [newCategory, setNewCategory] = useState({ id: '', name: '', logo_image_url: '' });
   const [newGift, setNewGift] = useState({ name: '', description: '', price: 0, image_url: '', availability_status: 'active' });
   
@@ -163,6 +167,7 @@ export const AdminDashboard: React.FC = () => {
       let mergedSettings: any = {
         global_markup: 0.20,
         category_markups: {},
+        naira_rate: 1700,
         api_keys: { supplier_api_key: '', supplier_api_url: '', number_api_key: '' }
       };
 
@@ -171,6 +176,9 @@ export const AdminDashboard: React.FC = () => {
           if (row.key === 'markup_settings') {
             mergedSettings.global_markup = row.value?.global_markup ?? 0.20;
             mergedSettings.category_markups = row.value?.category_markups || {};
+          }
+          if (row.key === 'currency_settings') {
+            mergedSettings.naira_rate = row.value?.naira_rate ?? 1700;
           }
           if (row.key === 'api_keys') {
             mergedSettings.api_keys = row.value || mergedSettings.api_keys;
@@ -246,30 +254,37 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const handleCreateProduct = async () => {
+    // Ensure price is saved correctly
     const productData = {
       ...newProduct,
       price: Number(newProduct.base_price) + Number(newProduct.markup),
       created_by: 'admin'
     };
     
-    // Remove id if it's empty string (for new products)
-    if (!productData.id) {
-      const { id, ...rest } = productData;
-      const { error } = await supabase.from('products').insert([rest]);
-      if (!error) {
-        setShowProductModal(false);
-        fetchProducts();
+    setLoading(true);
+    try {
+      if (!productData.id) {
+        const { id, ...rest } = productData;
+        const { error } = await supabase.from('products').insert([rest]);
+        if (!error) {
+          setShowProductModal(false);
+          fetchProducts();
+        } else {
+          alert("Error creating product: " + error.message);
+        }
       } else {
-        alert("Error creating product: " + error.message);
+        const { error } = await supabase.from('products').update(productData).eq('id', productData.id);
+        if (!error) {
+          setShowProductModal(false);
+          fetchProducts();
+        } else {
+          alert("Error updating product: " + error.message);
+        }
       }
-    } else {
-      const { error } = await supabase.from('products').update(productData).eq('id', productData.id);
-      if (!error) {
-        setShowProductModal(false);
-        fetchProducts();
-      } else {
-        alert("Error updating product: " + error.message);
-      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -354,15 +369,26 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const handleUpdateSettings = async () => {
-    const markupValue = { global_markup: settings.global_markup, category_markups: settings.category_markups };
+    setLoading(true);
+    try {
+      const markupValue = { global_markup: settings.global_markup, category_markups: settings.category_markups };
+      const currencyValue = { naira_rate: settings.naira_rate };
+      const apiValue = settings.api_keys;
 
-    const { error: error1 } = await supabase.from('system_settings').upsert({ key: 'markup_settings', value: markupValue }, { onConflict: 'key' });
-    
-    if (!error1) {
-      alert("Settings updated successfully!");
-    } else {
-      alert("Failed to update settings. Check console.");
-      console.error(error1);
+      const { error: error1 } = await supabase.from('system_settings').upsert({ key: 'markup_settings', value: markupValue }, { onConflict: 'key' });
+      const { error: error2 } = await supabase.from('system_settings').upsert({ key: 'currency_settings', value: currencyValue }, { onConflict: 'key' });
+      const { error: error3 } = await supabase.from('system_settings').upsert({ key: 'api_keys', value: apiValue }, { onConflict: 'key' });
+      
+      if (!error1 && !error2 && !error3) {
+        alert("Settings updated successfully!");
+      } else {
+        alert("Failed to update settings. Check console.");
+        console.error(error1 || error2 || error3);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -471,7 +497,7 @@ export const AdminDashboard: React.FC = () => {
                   setShowCategoryModal(true);
                 }
                 if (activeTab === 'products') {
-                  setNewProduct({ id: '', name: '', type: '', base_price: 0, markup: 0, stock_quantity: 0, description: '', icon_url: '', image_url: '', category_id: '', availability: true });
+                  setNewProduct({ id: '', name: '', type: '', base_price: 0, markup: 0, stock_quantity: 0, description: '', icon_url: '', image_url: '', category_id: '', availability: true, created_by: 'admin' });
                   setShowProductModal(true);
                 }
                 if (activeTab === 'gifts') setShowGiftModal(true);
@@ -663,7 +689,33 @@ export const AdminDashboard: React.FC = () => {
                           <td className="px-8 py-6 text-[#6B7280]">{categories.find(c => c.id === p.category_id)?.name || p.type}</td>
                           <td className="px-8 py-6 text-[#6B7280]">${p.base_price?.toFixed(2)}</td>
                           <td className="px-8 py-6 font-bold text-[#1F2937] dark:text-white">${p.price?.toFixed(2)}</td>
-                          <td className="px-8 py-6 text-[#6B7280]">{p.stock_quantity ?? 'N/A'}</td>
+                          <td className="px-8 py-6 text-[#6B7280]">
+                            <div className="flex items-center gap-2">
+                              <span>{p.stock_quantity ?? 'N/A'}</span>
+                              {p.supplier_id && (
+                                <button 
+                                  onClick={async (e) => {
+                                    const btn = e.currentTarget;
+                                    btn.classList.add('animate-spin');
+                                    try {
+                                      const resp = await fetch('/api/reseller/sync-stock', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ productId: p.id })
+                                      });
+                                      if (resp.ok) fetchProducts();
+                                    } finally {
+                                      btn.classList.remove('animate-spin');
+                                    }
+                                  }}
+                                  className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-primary transition-colors"
+                                  title="Sync Stock from Supplier"
+                                >
+                                  <Zap size={12} />
+                                </button>
+                              )}
+                            </div>
+                          </td>
                           <td className="px-8 py-6">
                             <span className={cn(
                               "px-3 py-1 rounded-full text-xs font-bold",
@@ -680,14 +732,15 @@ export const AdminDashboard: React.FC = () => {
                                      id: p.id,
                                      name: p.name,
                                      type: p.type,
-                                     base_price: p.base_price,
-                                     markup: p.price - p.base_price,
+                                     base_price: p.base_price || 0,
+                                     markup: (p.price || 0) - (p.base_price || 0),
                                      stock_quantity: p.stock_quantity || 0,
                                      description: p.description || '',
                                      icon_url: p.icon_url || '',
                                      image_url: p.image_url || '',
                                      category_id: p.category_id || '',
-                                     availability: p.availability
+                                     availability: p.availability,
+                                     created_by: p.created_by || ''
                                    });
                                    setShowProductModal(true);
                                  }}
@@ -732,7 +785,9 @@ export const AdminDashboard: React.FC = () => {
                         <th className="px-8 py-4 text-xs font-bold text-[#6B7280] uppercase">Order ID</th>
                         <th className="px-8 py-4 text-xs font-bold text-[#6B7280] uppercase">User</th>
                         <th className="px-8 py-4 text-xs font-bold text-[#6B7280] uppercase">Product</th>
-                        <th className="px-8 py-4 text-xs font-bold text-[#6B7280] uppercase">Amount</th>
+                        <th className="px-8 py-4 text-xs font-bold text-[#6B7280] uppercase text-center">Qty</th>
+                        <th className="px-8 py-4 text-xs font-bold text-[#6B7280] uppercase text-center">Unit Price</th>
+                        <th className="px-8 py-4 text-xs font-bold text-[#6B7280] uppercase">Total</th>
                         <th className="px-8 py-4 text-xs font-bold text-[#6B7280] uppercase">Status</th>
                         <th className="px-8 py-4 text-xs font-bold text-[#6B7280] uppercase">Payment</th>
                         <th className="px-8 py-4 text-xs font-bold text-[#6B7280] uppercase">Supplier</th>
@@ -747,7 +802,9 @@ export const AdminDashboard: React.FC = () => {
                             {users.find(u => u.id === o.user_id)?.email || 'Unknown'}
                           </td>
                           <td className="px-8 py-6 font-bold text-[#1F2937] dark:text-white">{o.product_name}</td>
-                          <td className="px-8 py-6 font-bold text-[#1F2937] dark:text-white">${o.amount?.toFixed(2)}</td>
+                          <td className="px-8 py-6 text-center font-bold text-slate-500">{o.quantity || 1}</td>
+                          <td className="px-8 py-6 text-center font-bold text-[#1F2937] dark:text-white">${(o.unit_price || o.amount).toFixed(2)}</td>
+                          <td className="px-8 py-6 font-bold text-primary">${o.amount?.toFixed(2)}</td>
                           <td className="px-8 py-6">
                             <span className={cn(
                               "px-3 py-1 rounded-full text-xs font-bold",
@@ -1016,17 +1073,73 @@ export const AdminDashboard: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-4">
+                  <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-8">
+                    <div className="space-y-3">
+                      <label className="text-sm font-bold text-slate-500 uppercase flex items-center gap-2">
+                         <Globe size={16} className="text-emerald-500" />
+                         Naira Conversion Rate (₦/$)
+                      </label>
+                      <p className="text-xs text-slate-400">Used for calculating prices in NGN across the site.</p>
+                      <div className="relative group">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">₦</span>
+                        <input 
+                          type="number" 
+                          value={settings.naira_rate} 
+                          onChange={e => setSettings({...settings, naira_rate: Number(e.target.value)})}
+                          className="w-full bg-slate-50 dark:bg-slate-800 rounded-2xl px-10 py-4 outline-none border border-transparent focus:border-primary/20 transition-all font-bold text-lg" 
+                        />
+                      </div>
+                    </div>
+
+                    <div className="pt-8 border-t border-slate-100 dark:border-slate-800 space-y-6">
+                       <h4 className="text-sm font-bold text-slate-500 uppercase flex items-center gap-2">
+                          <Key size={16} className="text-amber-500" />
+                          Master API Configuration
+                       </h4>
+                       <p className="text-xs text-slate-400">These are the default keys used by the backend if no specific supplier is assigned to a product.</p>
+                       
+                       <div className="space-y-4">
+                         <div className="space-y-2">
+                           <label className="text-[10px] font-bold text-slate-400 uppercase">Default Supplier API URL</label>
+                           <input 
+                             type="text" 
+                             value={settings.api_keys?.supplier_api_url} 
+                             onChange={e => setSettings({...settings, api_keys: {...settings.api_keys, supplier_api_url: e.target.value}})}
+                             className="w-full bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 outline-none font-mono text-xs" 
+                           />
+                         </div>
+                         <div className="space-y-2">
+                           <label className="text-[10px] font-bold text-slate-400 uppercase">Default Supplier API Key</label>
+                           <input 
+                             type="password" 
+                             value={settings.api_keys?.supplier_api_key} 
+                             onChange={e => setSettings({...settings, api_keys: {...settings.api_keys, supplier_api_key: e.target.value}})}
+                             className="w-full bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 outline-none font-mono text-xs" 
+                           />
+                         </div>
+                         <div className="space-y-2">
+                           <label className="text-[10px] font-bold text-slate-400 uppercase">Korapay Secret Key</label>
+                           <input 
+                             type="password" 
+                             value={settings.api_keys?.korapay_secret_key} 
+                             onChange={e => setSettings({...settings, api_keys: {...settings.api_keys, korapay_secret_key: e.target.value}})}
+                             className="w-full bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 outline-none font-mono text-xs" 
+                           />
+                         </div>
+                       </div>
+                    </div>
+
                     <p className="text-xs text-slate-400 italic">
-                      Looking for API Keys? Navigate to the <strong>Suppliers</strong> tab to manage primary and secondary API providers dynamically.
+                      Individual API suppliers can be managed independently in the <strong>Suppliers</strong> tab.
                     </p>
                   </div>
 
                   <button 
                     onClick={handleUpdateSettings}
-                    className="btn-primary w-full py-5 rounded-[2rem] font-bold text-lg shadow-xl shadow-primary/20"
+                    disabled={loading}
+                    className="btn-primary w-full py-5 rounded-[2rem] font-bold text-lg shadow-xl shadow-primary/20 flex items-center justify-center gap-2"
                   >
-                    Save Configuration
+                    {loading ? <Loader2 size={24} className="animate-spin" /> : 'Save Configuration'}
                   </button>
                 </div>
               </motion.div>
@@ -1071,12 +1184,27 @@ export const AdminDashboard: React.FC = () => {
                   <input type="text" value={newProduct.image_url} onChange={e => setNewProduct({...newProduct, image_url: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 outline-none" placeholder="https://example.com/image.png" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase">Base Price ($)</label>
-                  <input type="number" value={newProduct.base_price} onChange={e => setNewProduct({...newProduct, base_price: Number(e.target.value)})} className="w-full bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 outline-none" />
+                  <label className="text-xs font-bold text-slate-500 uppercase">Base Price ($) <span className="text-[10px] lowercase font-normal">(Supplier Cost)</span></label>
+                  <input 
+                    type="number" 
+                    disabled={!!newProduct.id && newProduct.created_by !== 'admin'}
+                    value={newProduct.base_price} 
+                    onChange={e => setNewProduct({...newProduct, base_price: Number(e.target.value)})} 
+                    className="w-full bg-slate-100 dark:bg-slate-800/50 rounded-xl px-4 py-3 outline-none opacity-70" 
+                  />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase">Markup ($)</label>
-                  <input type="number" value={newProduct.markup} onChange={e => setNewProduct({...newProduct, markup: Number(e.target.value)})} className="w-full bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 outline-none" />
+                  <label className="text-xs font-bold text-primary uppercase">Selling Price ($)</label>
+                  <input 
+                    type="number" 
+                    value={(Number(newProduct.base_price) + Number(newProduct.markup)).toFixed(2)} 
+                    onChange={e => {
+                      const sellingPrice = Number(e.target.value);
+                      const markup = sellingPrice - Number(newProduct.base_price);
+                      setNewProduct({...newProduct, markup});
+                    }} 
+                    className="w-full bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 outline-none border-2 border-primary/20 focus:border-primary transition-all font-bold" 
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-500 uppercase">Stock</label>
@@ -1162,7 +1290,22 @@ export const AdminDashboard: React.FC = () => {
 
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-500 uppercase">API Key</label>
-                  <input type="password" value={newSupplier.api_key} onChange={e => setNewSupplier({...newSupplier, api_key: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 outline-none font-mono text-xs" placeholder="************************" />
+                  <div className="relative">
+                    <input 
+                      type={showSupplierKey ? "text" : "password"} 
+                      value={newSupplier.api_key} 
+                      onChange={e => setNewSupplier({...newSupplier, api_key: e.target.value})} 
+                      className="w-full bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 pr-12 outline-none font-mono text-xs" 
+                      placeholder="************************" 
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => setShowSupplierKey(!showSupplierKey)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-primary transition-colors"
+                    >
+                      {showSupplierKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
